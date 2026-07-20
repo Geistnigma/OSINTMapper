@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-osint}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-osint_secret_2024}
+      POSTGRES_DB: ${DB_NAME:-osintmapper}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${DB_USER:-osint}
+      interval: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-4444}:4444"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-osint}:${DB_PASSWORD:-osint_secret_2024}@db:5432/${DB_NAME:-osintmapper}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
+      NODE_ENV: production
+      PORT: 4444
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./plugins:/app/plugins
+    restart: unless-stopped
+
+volumes:
+  pgdata:

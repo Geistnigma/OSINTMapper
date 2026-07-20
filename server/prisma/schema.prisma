@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String?
+  displayName  String?
+  passwordHash String
+  role         String    @default("ANALYST")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLogin    DateTime?
+
+  caseAccess   CaseAccess[]
+  auditLogs    AuditLog[]
+}
+
+model Case {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  tags        String   @default("[]")
+  status      String   @default("ACTIVE")
+  encrypted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  access      CaseAccess[]
+  history     CaseHistory[]
+}
+
+model CaseAccess {
+  caseId    String
+  userId    String
+  role      String   @default("ANALYST")
+  grantedAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([caseId, userId])
+}
+
+model CaseHistory {
+  id        Int      @id @default(autoincrement())
+  caseId    String
+  action    String
+  userId    String?
+  kind      String?
+  targetId  String?
+  createdAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  @@index([caseId, createdAt])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  userId    String?
+  caseId    String?
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+  @@index([createdAt])
+}
+
+model Plugin {
+  id          String   @id
+  name        String
+  version     String
+  description String?
+  author      String?
+  enabled     Boolean  @default(true)
+  config      String?
+  installedAt DateTime @default(now())
+}
