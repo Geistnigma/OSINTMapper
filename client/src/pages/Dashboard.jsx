@@ -76,7 +76,7 @@ export default function Dashboard() {
       {/* Nav */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 32px', borderBottom: `1px solid ${t.border}`, background: t.surface }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>OSINT<span style={{ color: t.accent }}>Mapper</span> <span style={{ fontSize: 9, color: t.textMuted, fontWeight: 400 }}>v0.1 alpha</span></span>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>OSINT<span style={{ color: t.accent }}>Mapper</span> <span style={{ fontSize: 9, color: t.textMuted, fontWeight: 400 }}>v0.1</span></span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.textSecondary }}>

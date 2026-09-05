@@ -1,6 +1,6 @@
 {
   "name": "osintmapper-server",
-  "version": "0.1.0-alpha",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",

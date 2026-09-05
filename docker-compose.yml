@@ -20,7 +20,7 @@ name: osintmapper
 services:
   app:
     build: .
-    image: osintmapper:0.1.0-alpha
+    image: osintmapper:0.1.0
     ports:
       # Sur 127.0.0.1 par défaut : publier sur 0.0.0.0 exposerait l'instance en
       # clair sur le réseau, or la session voyage dans un cookie `Secure` et

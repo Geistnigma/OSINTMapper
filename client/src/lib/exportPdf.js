@@ -74,7 +74,7 @@ export async function exporterPdf({ entities = [], links = [], stickers = [], ti
   // mesurer une chaîne qui ne sera pas celle imprimée fausse les retours.
   const wrapText=(text,maxW,fontSize)=>{pdf.setFontSize(fontSize);return pdf.splitTextToSize(sansHorsLatin1(text||""),maxW);};
   // Footer on every page
-  const addFooter=(pageNum)=>{pdf.setFontSize(7);muted();pdf.text(`OSINTMapper v0.1 alpha - ${caseInfo.title||"Export"} - ${fmtD(now)}`,M,H-8);pdf.text(`${pageNum}`,W-M,H-8,{align:"right"});};
+  const addFooter=(pageNum)=>{pdf.setFontSize(7);muted();pdf.text(`OSINTMapper v0.1 - ${caseInfo.title||"Export"} - ${fmtD(now)}`,M,H-8);pdf.text(`${pageNum}`,W-M,H-8,{align:"right"});};
 
   // ═══ PAGE 1: COVER + GRAPH CAPTURE ═══
   // Background
