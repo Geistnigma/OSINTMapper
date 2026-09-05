@@ -1,7 +1,7 @@
-# OSINTMapper v0.2.4 — Déploiement Production (Hostinger VPS)
+# OSINTMapper v0.1 - Déploiement Production (Hostinger VPS)
 
 > **Une instance tourne déjà avec des données réelles ?** Ne pas suivre les
-> étapes 1 à 5 telles quelles — elles décrivent une installation neuve et
+> étapes 1 à 5 telles quelles - elles décrivent une installation neuve et
 > `prisma db seed` / `db push` n'ont rien à y faire. Aller directement à
 > [Mise à niveau d'une instance existante](#mise-à-niveau-dune-instance-existante).
 
@@ -24,7 +24,7 @@
 
 ```bash
 # Utilisateur de service dédié. --system : pas de mot de passe, shell
-# /usr/sbin/nologin — personne ne s'y connecte, mais `sudo -u` et systemd
+# /usr/sbin/nologin - personne ne s'y connecte, mais `sudo -u` et systemd
 # lancent des commandes en son nom sans avoir besoin d'un shell.
 # Le répertoire personnel est nécessaire : PM2 y range son état (~/.pm2).
 sudo adduser --system --group --home /home/osintmapper osintmapper
@@ -34,14 +34,14 @@ sudo mkdir -p /opt/osintmapper
 
 ```bash
 # Transférer l'archive (depuis votre machine)
-scp osintmapper-v0.2.4.tar.gz root@VOTRE_IP:/opt/osintmapper/
+scp osintmapper-v0.1.tar.gz root@VOTRE_IP:/opt/osintmapper/
 ```
 
 ```bash
 # Sur le VPS
 cd /opt/osintmapper
-tar -xzf osintmapper-v0.2.4.tar.gz
-cd osintmapper-v0.2.4
+tar -xzf osintmapper-v0.1.tar.gz
+cd osintmapper-v0.1
 
 # --include=dev : vite est une devDependency et sert au build du client.
 # Sans ce drapeau, un NODE_ENV=production présent dans l'environnement du shell
@@ -51,7 +51,7 @@ npm install --workspaces --include=dev
 
 L'installation (npm, migrations, build) se fait en root ; **seule l'exécution**
 passe sous `osintmapper`. Les droits sont posés à l'étape 4, une fois le `.env`
-écrit et la base créée — les poser plus tôt ferait échouer les étapes 2 et 3.
+écrit et la base créée - les poser plus tôt ferait échouer les étapes 2 et 3.
 
 ## 2. Configuration .env
 
@@ -59,7 +59,7 @@ passe sous `osintmapper`. Les droits sont posés à l'étape 4, une fois le `.en
 cp .env.example server/.env
 ```
 
-**CRITIQUE — générer un vrai JWT_SECRET :**
+**CRITIQUE - générer un vrai JWT_SECRET :**
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
@@ -71,7 +71,7 @@ Copier la sortie dans `JWT_SECRET=` de `server/.env`, et renseigner
 Le serveur **refuse de démarrer** en production si `JWT_SECRET` est absent, plus
 court que 32 caractères ou laissé à sa valeur d'exemple. C'est voulu : il
 retombait auparavant sur un secret aléatoire régénéré à chaque redémarrage, ce
-qui masquait un `.env` non chargé — or si `NODE_ENV` n'est pas lu non plus, CORS
+qui masquait un `.env` non chargé - or si `NODE_ENV` n'est pas lu non plus, CORS
 repasse en mode permissif et le client statique n'est plus servi du tout.
 
 ## 3. Base de données et build
@@ -89,17 +89,17 @@ repasse en mode permissif et le client statique n'est plus servi du tout.
 > elle ne pouvait pas fonctionner sur une installation neuve.
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4/server
+cd /opt/osintmapper/osintmapper-v0.1/server
 npx prisma generate
 npx prisma migrate deploy
-npx prisma db seed          # ⚠ NOTER le mot de passe admin affiché — une seule fois
+ADMIN_PASSWORD='…' npx prisma db seed   # ⚠ sinon le mot de passe vaut `osintmapper`, valeur publique
 cd ../client && npm run build && cd ..
 ```
 
-## 4. Droits — l'application ne doit pas pouvoir se réécrire
+## 4. Droits - l'application ne doit pas pouvoir se réécrire
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4
+cd /opt/osintmapper/osintmapper-v0.1
 
 # Le code appartient à root : le process ne peut que le lire. Un attaquant qui
 # obtiendrait l'exécution dans Node ne peut donc pas se rendre persistant en
@@ -120,10 +120,10 @@ sudo chown root:osintmapper server/.env
 sudo chmod 640 server/.env
 ```
 
-## 5. PM2 — Process manager
+## 5. PM2 - Process manager
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4/server
+cd /opt/osintmapper/osintmapper-v0.1/server
 
 # -H : PM2 doit écrire son état dans le HOME d'osintmapper, pas dans celui de root.
 # --env-file est INDISPENSABLE : rien dans le code n'importe dotenv. Le .env
@@ -135,7 +135,7 @@ sudo -u osintmapper -H pm2 start index.js \
   --node-args="--env-file=.env"
 
 # Le serveur Yjs (collaboration temps réel) est intégré à l'API depuis la
-# v0.2.4 : il est servi sur /yjs avec authentification. Plus de process séparé.
+# Il est servi sur /yjs avec authentification. Plus de process séparé.
 # Si vous mettez à jour depuis une version antérieure :
 #   sudo -u osintmapper -H pm2 delete osintmapper-yjs
 
@@ -145,11 +145,11 @@ sudo -u osintmapper -H pm2 save
 sudo env PATH=$PATH pm2 startup systemd -u osintmapper --hp /home/osintmapper
 ```
 
-**Vérifier que rien ne tourne en root** — la colonne `USER` doit afficher
+**Vérifier que rien ne tourne en root** - la colonne `USER` doit afficher
 `osintmap` (tronqué à 8 caractères), et la ligne `env:` `production` :
 
 ```bash
-# PM2 renomme le process avec le nom de l'application — d'où le préfixe
+# PM2 renomme le process avec le nom de l'application - d'où le préfixe
 # « 0|osintmap » dans les logs. `ps -C` filtre sur ce nom court (`comm`, 15
 # caractères), et « osintmapper-api » en fait exactement 15 : il n'existe donc
 # AUCUN process nommé `node`, et `ps -C node` répond une liste vide même quand
@@ -162,11 +162,10 @@ ps -eo user,pid,comm,args | grep -i osintmapper | grep -v grep
 sudo -u osintmapper -H pm2 logs osintmapper-api --lines 20
 ```
 
-> `pm2` invoqué sans `sudo -u osintmapper -H` s'adresse au démon de **root** —
-> un second démon, qui ne voit pas le process. Si `pm2 list` semble vide, c'est
+> `pm2` invoqué sans `sudo -u osintmapper -H` s'adresse au démon de **root** - > un second démon, qui ne voit pas le process. Si `pm2 list` semble vide, c'est
 > presque toujours ça.
 
-## 6. Nginx — Reverse proxy + HTTPS
+## 6. Nginx - Reverse proxy + HTTPS
 
 ```bash
 sudo apt install nginx certbot python3-certbot-nginx
@@ -225,7 +224,7 @@ server {
         proxy_read_timeout 86400;
     }
 
-    # Yjs WebSocket (collaboration sync) — servi par l'API, authentifié par JWT
+    # Yjs WebSocket (collaboration sync) - servi par l'API, authentifié par JWT
     location /yjs {
         proxy_pass http://127.0.0.1:4444;
         proxy_http_version 1.1;
@@ -256,14 +255,21 @@ sudo certbot --nginx -d VOTRE_DOMAINE
 
 ## 7. Premier login
 
-Le compte administrateur est créé par `prisma db seed` (étape 1) avec un **mot
-de passe aléatoire affiché une seule fois** dans la sortie de la commande. Il
-n'existe plus de couple `admin`/`admin` : le seed remettait ce mot de passe à
-chaque exécution, y compris lors d'une simple réinstallation.
+Le compte administrateur est créé par `prisma db seed` (étape 1). À défaut de
+`ADMIN_PASSWORD`, son mot de passe vaut **`osintmapper`** - une valeur d'usine
+documentée dans le README et écrite dans le code source, donc **publique**.
 
-1. Récupérer le mot de passe dans la sortie du seed (le noter avant de fermer le
-   terminal — il n'est stocké nulle part en clair).
-   Pour le choisir soi-même : `ADMIN_PASSWORD='…' npx prisma db seed`
+Sur une instance exposée sur internet, ce n'est pas acceptable au-delà de
+quelques minutes : **fournir `ADMIN_PASSWORD` dès le premier seed**, ce qui
+évite que le compte existe ne serait-ce qu'un instant avec un mot de passe
+connu.
+
+Ce que le seed garantit en revanche, et qui ne l'a pas toujours été :
+il **ne réécrit jamais un compte existant**. Une réinstallation, une mise à jour
+ou un redémarrage de conteneur ne ramène pas le mot de passe à sa valeur
+d'usine.
+
+1. `ADMIN_PASSWORD='…' npx prisma db seed` à l'installation.
 2. Aller sur `https://VOTRE_DOMAINE`, se connecter en `admin`
 3. Changer le mot de passe depuis le panneau admin (12 caractères minimum)
 4. Créer les comptes utilisateurs nécessaires
@@ -275,7 +281,7 @@ chaque exécution, y compris lors d'une simple réinstallation.
 
 > ⚠ La base SQLite est dans **`server/prisma/data/`**, pas `server/data/` :
 > Prisma résout une URL SQLite relative depuis le dossier du schéma. Le script
-> précédent copiait `server/data/osintmapper.db`, qui n'existe pas — le `cp`
+> précédent copiait `server/data/osintmapper.db`, qui n'existe pas - le `cp`
 > échouait à chaque heure et la base n'a jamais été sauvegardée. Les pièces
 > jointes (`uploads/`) et les points de restauration (`snapshots/`) étaient
 > également absents de l'archive.
@@ -285,12 +291,12 @@ chaque exécution, y compris lors d'une simple réinstallation.
 cat > /opt/osintmapper/backup.sh << 'EOF'
 #!/bin/bash
 set -u
-ROOT="/opt/osintmapper/osintmapper-v0.2.4"
+ROOT="/opt/osintmapper/osintmapper-v0.1"
 BACKUP_DIR="/opt/osintmapper/backups"
 mkdir -p "$BACKUP_DIR"
 DATE=$(date +%Y%m%d_%H%M%S)
 
-# Base SQLite — via l'API de sauvegarde, qui produit une copie cohérente même
+# Base SQLite - via l'API de sauvegarde, qui produit une copie cohérente même
 # si une écriture est en cours (le mode WAL rend un simple cp risqué).
 sqlite3 "$ROOT/server/prisma/data/osintmapper.db" ".backup '$BACKUP_DIR/db_$DATE.sqlite'"
 
@@ -327,11 +333,11 @@ sudo ufw allow 443/tcp   # HTTPS
 sudo ufw enable
 ```
 
-**NE PAS exposer le port 4444 directement** — nginx fait proxy.
+**NE PAS exposer le port 4444 directement** - nginx fait proxy.
 
 ---
 
-## Audit de sécurité — Résumé
+## Audit de sécurité - Résumé
 
 | Point | Statut | Détail |
 |-------|--------|--------|
@@ -341,17 +347,17 @@ sudo ufw enable
 | Auth health | ✅ FIX v0.2.1 | `/api/health` protégé, `/api/ping` public (pas de données sensibles) |
 | Client-side routing | ✅ | `ProtectedRoute` redirige vers `/login` |
 | Utilisateur d'exécution | ✅ | Service sous `osintmapper`, **plus en root**. L'utilisateur dédié était créé puis jamais utilisé |
-| Droits fichiers | ✅ | Code en lecture seule pour le service ; écriture limitée à `server/data/` et `server/prisma/data/` — vérifié : toutes les écritures du serveur y aboutissent |
-| Secret sur disque | ✅ | `server/.env` en `root:osintmapper 640` — lisible par le service, invisible pour les autres comptes |
+| Droits fichiers | ✅ | Code en lecture seule pour le service ; écriture limitée à `server/data/` et `server/prisma/data/` - vérifié : toutes les écritures du serveur y aboutissent |
+| Secret sur disque | ✅ | `server/.env` en `root:osintmapper 640` - lisible par le service, invisible pour les autres comptes |
 | JWT secret | ✅ | Obligatoire, ≥ 32 car. : le serveur **refuse de démarrer** sans. Plus de repli aléatoire silencieux |
-| Admin password | ✅ | Aléatoire à la création, affiché une seule fois. Le seed ne réinitialise plus un compte existant |
+| Admin password | ⚠ | Valeur d'usine **publique** (`osintmapper`) si `ADMIN_PASSWORD` n'est pas fourni au premier seed - la fournir en production. Le seed ne réinitialise en revanche jamais un compte existant |
 | CORS | ✅ FIX v0.2.1 | Restreint en production (same-origin ou domaine explicite) |
 | Helmet | ✅ | En-têtes de sécurité + HSTS |
 | CSP | ✅ | Politique explicite. Elle était **désactivée** (`contentSecurityPolicy: false`) alors que ce tableau la déclarait active |
 | Cookie de session | ✅ | `HttpOnly` + `SameSite=Lax` + **`Secure`** en production |
 | Sourcemaps | ✅ | Plus générées ; `*.map` refusé par le serveur en second rideau |
 | Rate limiting | ✅ | 20 échecs de connexion / 15 min · 60 req/15 min sur `/api/auth` · 600 req/min sur `/api` |
-| Journal des échecs | ✅ | `auth:login:failed` avec IP — le bourrage d'identifiants ne laissait aucune trace |
+| Journal des échecs | ✅ | `auth:login:failed` avec IP - le bourrage d'identifiants ne laissait aucune trace |
 | Proxies sortants | ✅ | Coordonnées validées numériquement avant interpolation dans l'URL OSRM |
 | Passwords | ✅ | bcrypt 12 rounds · 12 caractères minimum, y compris pour le chiffrement d'enquête |
 | Encryption | ✅ | AES-256-GCM, PBKDF2 100k iterations |
@@ -367,7 +373,7 @@ sudo ufw enable
 | Corruption SQLite | WAL mode natif, backups horaires |
 | Perte fichier JSON case | Backup .bak à chaque save + backup cron |
 | Perte complète | Backups cron DB + cases toutes les heures, 30 retenus |
-| Chiffrement case | AES-256-GCM, clé dérivée PBKDF2 — **sauvegarder les mots de passe séparément** |
+| Chiffrement case | AES-256-GCM, clé dérivée PBKDF2 - **sauvegarder les mots de passe séparément** |
 
 ---
 
@@ -383,7 +389,7 @@ nouvelle arborescence, et l'ancienne reste intacte comme filet de retour arrièr
 > ci-dessous et sont déjà faites : reprenez à l'**étape 1** (arrêter), puis
 > suivez tout, en survolant l'étape 5 dont il ne reste que la reprise du `.env`
 > de l'ancienne installation. Ne lancez **ni `db seed` ni `db push`** : le seed
-> ne réinitialise aucun compte existant, mais il est inutile ici — l'admin
+> ne réinitialise aucun compte existant, mais il est inutile ici - l'admin
 > arrive avec la base copiée.
 
 ### Où vivent les données à migrer
@@ -394,7 +400,7 @@ dans deux arborescences, qu'on copie telles quelles.
 | Donnée | Emplacement | Forme |
 |---|---|---|
 | Comptes, rôles, accès aux enquêtes, journal d'audit, **métadonnées** d'enquête (titre, propriétaire, statut) | `server/prisma/data/osintmapper.db` | SQLite (+ `-wal`, `-shm`) |
-| **Contenu** des enquêtes (entités, liens, stickers, post-its) | `server/data/cases/` | un JSON — ou `.enc` si chiffrée — par enquête |
+| **Contenu** des enquêtes (entités, liens, stickers, post-its) | `server/data/cases/` | un JSON - ou `.enc` si chiffrée - par enquête |
 | Pièces jointes | `server/data/uploads/` | fichiers |
 | Points de restauration | `server/data/snapshots/` | copies des fichiers d'enquête |
 | Plugins déposés à l'exécution | `server/data/plugins/` | modules ESM (+ table `Plugin`) |
@@ -406,22 +412,22 @@ Les deux copies de l'étape 6 vont ensemble.
 `server/data/yjs/` n'a pas à être repris : l'état CRDT est éphémère, le fichier
 d'enquête fait foi dès que la salle est fermée.
 
-### Ce que la mise à niveau change — et ce qu'elle ne change pas
+### Ce que la mise à niveau change - et ce qu'elle ne change pas
 
 | | |
 |---|---|
 | **Comptes** | Intacts. Le seed ne touche plus jamais un compte existant (vérifié) ; il n'est de toute façon pas exécuté ici. Le minimum de 12 caractères ne s'applique qu'aux **nouveaux** mots de passe : personne n'est déconnecté ni forcé d'en changer |
-| **Enquêtes (JSON/.enc)** | Intactes, format de fichier inchangé (`version: 1`). Les enquêtes chiffrées s'ouvrent avec leur mot de passe actuel — `unlock` ne contrôle aucune longueur |
+| **Enquêtes (JSON/.enc)** | Intactes, format de fichier inchangé (`version: 1`). Les enquêtes chiffrées s'ouvrent avec leur mot de passe actuel - `unlock` ne contrôle aucune longueur |
 | **Base** | Migrations **additives** : `Upload`, `Invite`, `CaseSnapshot`, `PluginPreference`, colonne `Case.settings`. Aucune ne touche `User`, `Case` ni `CaseAccess` |
 | **⚠ Table `Plugin`** | Seule exception : `runtime_plugins` la reconstruit et **échoue si elle contient des lignes**. Concerne uniquement les plugins installés à l'exécution, pas les plugins natifs |
 | **⚠ Pièces jointes** | Elles sont désormais servies selon l'accès à l'enquête. Celles déposées avant n'ont pas de ligne `Upload` et renverraient 404 → `link-uploads.js` les rattache |
-| **Sessions** | Coupées au redémarrage (reconnexion). Si `JWT_SECRET` doit changer, tout le monde se reconnecte — les comptes, eux, ne bougent pas |
+| **Sessions** | Coupées au redémarrage (reconnexion). Si `JWT_SECRET` doit changer, tout le monde se reconnecte - les comptes, eux, ne bougent pas |
 
 ### 1. Prévenir, puis arrêter
 
 Le document Yjs d'une salle active vit **en mémoire**. Un redémarrage pendant
 qu'une équipe travaille perd ce qui n'a pas encore été écrit dans le fichier
-(sauvegarde à 1 s d'inactivité, et périodique à 30 s — la fenêtre est courte
+(sauvegarde à 1 s d'inactivité, et périodique à 30 s - la fenêtre est courte
 mais réelle). Prévenir, vérifier que plus personne n'est connecté, puis :
 
 ```bash
@@ -438,7 +444,7 @@ ls -lh /opt/osintmapper/backups/ | tail -3     # deux fichiers, non vides
 Une sauvegarde non vérifiée n'est pas une sauvegarde. Sans elle, on ne va pas
 plus loin.
 
-### 3. Pré-vol — diagnostiquer avant de toucher à quoi que ce soit
+### 3. Pré-vol - diagnostiquer avant de toucher à quoi que ce soit
 
 Depuis l'installation **actuelle** (lecture seule, n'écrit rien) :
 
@@ -450,8 +456,7 @@ node --env-file=.env scripts/preflight-upgrade.js
 Le script répond aux quatre questions qui font échouer une mise à niveau :
 
 - **`JWT_SECRET` conforme ?** Il est devenu obligatoire (≥ 32 caractères) : une
-  instance qui tournait sans **ne redémarrera pas**. En générer un si besoin —
-  cela déconnecte tout le monde, sans rien changer aux comptes.
+  instance qui tournait sans **ne redémarrera pas**. En générer un si besoin - cela déconnecte tout le monde, sans rien changer aux comptes.
 - **État des migrations.** Pas de table `_prisma_migrations` = base créée avec
   `db push` : `migrate deploy` échouerait sur « table already exists ». Il faut
   la **baseliner** (voir ci-dessous). **Ne jamais accepter le reset que propose
@@ -497,13 +502,13 @@ rm -rf /tmp/om-essai
 
 ### 5. Installer la nouvelle version à côté
 
-*(Déjà fait si vous venez des étapes 1–2 de l'installation neuve : il ne reste
+*(Déjà fait si vous venez des étapes 1-2 de l'installation neuve : il ne reste
 que la reprise du `.env`.)*
 
 ```bash
 cd /opt/osintmapper
-tar -xzf osintmapper-v0.2.4.tar.gz          # → /opt/osintmapper/osintmapper-v0.2.4
-cd osintmapper-v0.2.4
+tar -xzf osintmapper-v0.1.tar.gz          # → /opt/osintmapper/osintmapper-v0.1
+cd osintmapper-v0.1
 npm install --workspaces --include=dev
 
 # Reprendre la configuration existante, puis la compléter
@@ -516,7 +521,7 @@ Ajouter dans `server/.env` : `PUBLIC_ORIGIN=https://VOTRE_DOMAINE`, et
 ### 6. Déplacer les données, migrer, construire
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4
+cd /opt/osintmapper/osintmapper-v0.1
 ANCIEN=/opt/osintmapper/<INSTALLATION_ACTUELLE>
 
 # L'archive ne contient aucune donnée : ces dossiers n'existent pas encore, et
@@ -524,8 +529,8 @@ ANCIEN=/opt/osintmapper/<INSTALLATION_ACTUELLE>
 sudo mkdir -p server/data server/prisma/data
 
 # Si `migrate deploy` / `db seed` ont déjà été lancés ici par erreur, une base
-# VIDE occupe la place. L'écraser est sans conséquence — elle ne contient qu'un
-# compte admin fraîchement créé — mais il faut emporter -wal et -shm avec elle,
+# VIDE occupe la place. L'écraser est sans conséquence - elle ne contient qu'un
+# compte admin fraîchement créé - mais il faut emporter -wal et -shm avec elle,
 # sinon SQLite rejouerait un journal qui ne correspond plus au fichier copié.
 sudo rm -f server/prisma/data/osintmapper.db server/prisma/data/osintmapper.db-{wal,shm}
 
@@ -547,7 +552,7 @@ ne fait qu'ajouter les tables et colonnes des nouvelles versions (`Upload`,
 `User`, `Case` ni `CaseAccess`.
 
 **L'ancienne instance est sur une autre machine ?** Même principe, en
-transférant les deux arborescences plutôt qu'en les copiant — l'application
+transférant les deux arborescences plutôt qu'en les copiant - l'application
 arrêtée des deux côtés, sinon la base est capturée en cours d'écriture :
 
 ```bash
@@ -561,7 +566,7 @@ tar -czf /tmp/om-db.tar.gz    -C "$ANCIEN/server/prisma" data
 scp /tmp/om-{data,db}.tar.gz root@NOUVELLE_IP:/tmp/
 
 # Sur la NOUVELLE machine
-cd /opt/osintmapper/osintmapper-v0.2.4/server
+cd /opt/osintmapper/osintmapper-v0.1/server
 sudo tar -xzf /tmp/om-data.tar.gz -C .        # → server/data/
 sudo tar -xzf /tmp/om-db.tar.gz   -C prisma/  # → server/prisma/data/
 rm -f /tmp/om-data.tar.gz /tmp/om-db.tar.gz
@@ -578,10 +583,10 @@ Puis appliquer les droits de l'**étape 4** (code en root, données à
 
 Sans cela, les images déposées avant la mise à niveau renvoient 404 : elles n'ont
 pas de ligne `Upload`, donc plus aucun propriétaire connu. Le script n'écrit que
-des lignes `Upload` — il ne modifie **aucun** fichier d'enquête.
+des lignes `Upload` - il ne modifie **aucun** fichier d'enquête.
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4/server
+cd /opt/osintmapper/osintmapper-v0.1/server
 node --env-file=.env scripts/link-uploads.js            # simulation, n'écrit rien
 node --env-file=.env scripts/link-uploads.js --apply    # rattachement
 ```
@@ -593,12 +598,12 @@ leurs pièces jointes ne peuvent pas être rattachées automatiquement et devron
 ### 8. Démarrer et vérifier
 
 ```bash
-cd /opt/osintmapper/osintmapper-v0.2.4/server
+cd /opt/osintmapper/osintmapper-v0.1/server
 sudo -u osintmapper -H pm2 delete osintmapper-api
 sudo -u osintmapper -H pm2 start index.js --name osintmapper-api --node-args="--env-file=.env"
 sudo -u osintmapper -H pm2 save
 
-# Version antérieure à la v0.2.4 : le process Yjs séparé n'a plus lieu d'être
+# Instance issue d'une version antérieure : le process Yjs séparé n'a plus lieu d'être
 sudo -u osintmapper -H pm2 delete osintmapper-yjs 2>/dev/null
 
 sudo -u osintmapper -H pm2 logs osintmapper-api --lines 20   # « env: production »
@@ -612,7 +617,7 @@ s'ouvre avec son contenu, une enquête chiffrée se déverrouille avec son mot d
 passe d'origine, une image ancienne s'affiche, la carte et le magasin de plugins
 fonctionnent (c'est là que la CSP se ferait sentir).
 
-### 9. Démonter l'ancien démon PM2 — **à faire, et seulement après validation**
+### 9. Démonter l'ancien démon PM2 - **à faire, et seulement après validation**
 
 Une instance antérieure tournait en root : ses process vivent dans le démon PM2
 **de root** (`/root/.pm2`), un démon distinct de celui d'`osintmapper`. C'est
@@ -635,7 +640,7 @@ sudo pm2 kill                    # arrête le God Daemon de root
 
 **Installer en remplacement l'unité systemd du nouveau démon.** `pm2 save` ne
 suffit pas : il enregistre la liste des process, pas le démarrage au boot. Sans
-cette étape — et une fois `pm2-root` désactivé — plus rien ne relance
+cette étape - et une fois `pm2-root` désactivé - plus rien ne relance
 l'application après un redémarrage du VPS, et la panne ne se manifeste qu'au
 reboot suivant, longtemps après la mise à niveau.
 
@@ -643,7 +648,7 @@ reboot suivant, longtemps après la mise à niveau.
 sudo env PATH=$PATH pm2 startup systemd -u osintmapper --hp /home/osintmapper
 sudo -u osintmapper -H pm2 save
 
-systemctl is-enabled pm2-osintmapper     # « enabled » — PAS « not-found »
+systemctl is-enabled pm2-osintmapper     # « enabled » - PAS « not-found »
 ```
 
 Contrôle des ports : rien sur 1234 (l'ancien Yjs tournait **sans aucune
@@ -656,7 +661,7 @@ ps -o user,pid,cmd -p <PID_AFFICHÉ>      # USER = osintmap
 sudo ls -l /proc/<PID_AFFICHÉ>/cwd       # → la NOUVELLE arborescence
 ```
 
-### En cas de problème — retour arrière
+### En cas de problème - retour arrière
 
 L'ancienne installation n'a pas été modifiée : elle redevient active en deux
 commandes.
@@ -677,7 +682,7 @@ Si le doute porte sur les données elles-mêmes, restaurer la sauvegarde de
 l'étape 2 (procédure dans « Commandes utiles »).
 
 Une fois la nouvelle version validée sur plusieurs jours, l'ancienne
-arborescence peut être archivée puis supprimée — elle contient une copie
+arborescence peut être archivée puis supprimée - elle contient une copie
 complète des enquêtes, à ne pas laisser traîner indéfiniment sur le disque.
 
 ---
@@ -698,7 +703,7 @@ sudo -u osintmapper -H pm2 logs osintmapper-api
 sudo -u osintmapper -H pm2 restart osintmapper-api
 
 # ─── Mise à jour ───
-cd /opt/osintmapper/osintmapper-v0.2.4
+cd /opt/osintmapper/osintmapper-v0.1
 # (déposer la nouvelle version, puis :)
 npm install --workspaces --include=dev
 cd server && npx prisma migrate deploy && cd ../client && npm run build && cd ..
@@ -718,9 +723,9 @@ sudo -u osintmapper -H pm2 restart osintmapper-api
 # (le -wal en mémoire ne correspondrait plus au fichier restauré).
 sudo -u osintmapper -H pm2 stop osintmapper-api
 sudo -u osintmapper cp /opt/osintmapper/backups/db_AAAAMMJJ_HHMMSS.sqlite \
-  /opt/osintmapper/osintmapper-v0.2.4/server/prisma/data/osintmapper.db
-sudo rm -f /opt/osintmapper/osintmapper-v0.2.4/server/prisma/data/osintmapper.db-{wal,shm}
+  /opt/osintmapper/osintmapper-v0.1/server/prisma/data/osintmapper.db
+sudo rm -f /opt/osintmapper/osintmapper-v0.1/server/prisma/data/osintmapper.db-{wal,shm}
 sudo -u osintmapper tar -xzf /opt/osintmapper/backups/data_AAAAMMJJ_HHMMSS.tar.gz \
-  -C /opt/osintmapper/osintmapper-v0.2.4/server/data
+  -C /opt/osintmapper/osintmapper-v0.1/server/data
 sudo -u osintmapper -H pm2 start osintmapper-api
 ```
