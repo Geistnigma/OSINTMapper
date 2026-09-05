@@ -209,12 +209,18 @@ La cotation d'une entité suit le **couple OTAN** : fiabilité de la source (A-F
 - **WebSockets authentifiés** - `/yjs` et `/ws-custom` exigent un jeton valide et un accès à l'enquête ; le rôle `VIEWER` est appliqué sur le socket, pas seulement sur les routes HTTP
 - **Invitations révocables** - Jeton de 7 jours dont seule l'empreinte est stockée, annulable à tout moment
 - **CSP énumérée** - `connect-src` fermé sur l'origine propre : c'est ce qui empêche un bundle de plugin compromis d'exfiltrer une enquête
-- **Aucune dépendance chargée depuis un CDN** - tout passe par npm, ce qui permet un déploiement hors ligne et ne signale l'usage de l'outil à aucun tiers
+- **Aucune dépendance chargée depuis un CDN** - bibliothèques et feuilles de style passent toutes par npm : à l'ouverture, la page ne contacte personne. Leaflet et html2canvas étaient auparavant injectés en `<script src="unpkg">` sans SRI - un CDN compromis, c'est de l'exécution arbitraire dans un outil d'enquête. Les **fonds de carte** font exception et restent distants (voir l'encadré ci-dessous)
 - **Sauvegarde atomique** - tmp → bak → rename
 - **Chiffrement** - AES-256-GCM + PBKDF2-SHA256 (600 000 itérations, la recommandation OWASP courante) par enquête ; le nombre d'itérations voyage avec le fichier, donc relever le paramètre ne rend pas illisible ce qui est déjà écrit. La clé reste en mémoire serveur, expirée après 2 h d'inactivité
 - **Suppression réelle** - Supprimer une enquête efface ses fichiers, ses pièces jointes, ses instantanés et révoque ses invitations
 
-> **Fuite vers des tiers, à connaître** : la recherche d'adresse et le calcul d'itinéraire passent par des proxys serveur vers **Nominatim** (OpenStreetMap) et **OSRM**. Le serveur relaie pour éviter le CORS, il ne masque pas la requête : chaque géocodage signale une adresse d'enquête à un tiers. Une instance qui ne peut pas se le permettre doit pointer ces routes vers ses propres serveurs, ou les désactiver.
+> **Fuites vers des tiers, à connaître.** « Auto-hébergé » vaut pour vos données, pas pour tout le trafic du navigateur. Trois canaux sortent de votre infrastructure :
+>
+> 1. **Géocodage et itinéraires** - la recherche d'adresse et le calcul de trajet passent par des proxys serveur vers **Nominatim** (OpenStreetMap) et **OSRM**. Le serveur relaie pour éviter le CORS, il ne masque pas la requête : chaque géocodage signale une adresse d'enquête à un tiers.
+> 2. **Fonds de carte** - le plugin carte charge ses tuiles **directement depuis le navigateur**, sans passer par votre serveur, chez **OpenStreetMap**, **CartoDB** ou **Esri** selon le fond choisi. Chaque déplacement et chaque zoom leur signale donc la zone consultée, avec l'IP de l'analyste.
+> 3. **Street View** - le panneau Street View est un **iframe Google** (`maps.google.com`). L'ouvrir transmet à Google les coordonnées exactes du point, l'IP du poste et les cookies Google de la session. Les boutons « Google Maps » et « Plans » sont, eux, de simples liens : rien ne part tant qu'on ne clique pas.
+>
+> Ces hôtes sont **énumérés dans la CSP** (`img-src` pour les tuiles, `frame-src` pour l'iframe) : rien d'autre ne peut sortir, et `connect-src` reste fermé sur votre origine. Une instance qui ne peut pas se le permettre doit héberger ses propres tuiles et son propre Nominatim, ou renoncer au plugin carte.
 
 `JWT_SECRET` est **obligatoire en production** : le serveur refuse de démarrer sans.
 
