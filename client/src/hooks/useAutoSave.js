@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { getToken } from '../lib/api';
 
 const SERVER_URL = (window.location.port && !['80','443',''].includes(window.location.port)) ? `http://${window.location.hostname}:4444` : '';
 
@@ -26,11 +25,11 @@ export function useAutoSave({ caseId, getState, enabled = true, debounceMs = 100
 
     setStatus('saving');
     try {
-      const token = getToken();
       const state = getState();
       const res = await fetch(`${SERVER_URL}/api/save/${encodeURIComponent(caseId)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           entities: state.entities, links: state.links,
           stickers: state.stickers, postits: state.postits,

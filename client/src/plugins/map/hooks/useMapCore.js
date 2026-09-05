@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { loadLeaflet, TILES } from '../utils.js';
 
 /**
- * Core map hook — creates the Leaflet map once and manages tiles.
+ * Core map hook - creates the Leaflet map once and manages tiles.
  * Returns: { map, L, ready, setTile, tile }
- * The map is NEVER destroyed and recreated on state changes — only layers are updated.
+ * The map is NEVER destroyed and recreated on state changes - only layers are updated.
  */
 export function useMapCore(mapRef, initialTile = 'dark') {
   const mapInst = useRef(null);

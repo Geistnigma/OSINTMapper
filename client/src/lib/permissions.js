@@ -1,5 +1,5 @@
 /**
- * usePermissions — Role-based access control for the UI.
+ * usePermissions - Role-based access control for the UI.
  *
  * Usage:
  *   const { canEdit, canDelete, canManageUsers, isAdmin, isViewer, role } = usePermissions();

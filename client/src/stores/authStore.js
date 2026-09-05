@@ -1,25 +1,23 @@
 import { create } from 'zustand';
-import { api, setToken, getToken } from '../lib/api';
+import { api } from '../lib/api';
 
 const useAuthStore = create((set, get) => ({
   user: null,
-  token: getToken(),
   loading: true,
   error: null,
 
+  /**
+   * La session vit dans un cookie `HttpOnly` : le client ne peut pas la lire,
+   * donc il DEMANDE au serveur. L'ancien code court-circuitait cet appel quand
+   * `localStorage` était vide - commentaire d'époque : « don't try cookies ».
+   * Avec le cookie pour seule source, ce raccourci déconnectait tout le monde.
+   */
   checkAuth: async () => {
-    const token = getToken();
-    if (!token) {
-      // No localStorage token — don't try cookies, just mark as unauthenticated
-      set({ loading: false, user: null });
-      return;
-    }
     try {
       const data = await api('/api/auth/me');
       set({ user: data.user, loading: false });
     } catch {
-      setToken(null);
-      set({ user: null, token: null, loading: false });
+      set({ user: null, loading: false });
     }
   },
 
@@ -30,8 +28,9 @@ const useAuthStore = create((set, get) => ({
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      setToken(data.token);
-      set({ user: data.user, token: data.token, error: null });
+      // Le jeton renvoyé dans le corps n'est volontairement PAS conservé : le
+      // cookie posé par la réponse suffit, et rien de lisible en JS ne subsiste.
+      set({ user: data.user, error: null });
       return true;
     } catch (e) {
       set({ error: e.message });
@@ -46,8 +45,7 @@ const useAuthStore = create((set, get) => ({
         method: 'POST',
         body: JSON.stringify({ username, email, password, displayName }),
       });
-      setToken(data.token);
-      set({ user: data.user, token: data.token, error: null });
+      set({ user: data.user, error: null });
       return true;
     } catch (e) {
       set({ error: e.message });
@@ -56,9 +54,10 @@ const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
+    // C'est le serveur qui efface le cookie (mêmes options qu'à la pose,
+    // sinon il survit à la déconnexion).
     try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
-    setToken(null);
-    set({ user: null, token: null });
+    set({ user: null });
   },
 
   clearError: () => set({ error: null }),

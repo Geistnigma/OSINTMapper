@@ -1,4 +1,6 @@
 import React from 'react';
+// Composant de CLASSE : pas de hook possible, on passe par `traduire`.
+import { traduire } from '../../i18n';
 
 /**
  * Error Boundary for plugins.
@@ -28,18 +30,18 @@ export class PluginErrorBoundary extends React.Component {
           fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
         }}>
           <span style={{ fontSize: 36 }}>💥</span>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Le plugin "{this.props.pluginName || this.props.pluginId}" a crashé</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{traduire('plugin.plante', { nom: this.props.pluginName || this.props.pluginId })}</div>
           <code style={{
             fontSize: 11, color: '#ef4444', background: (t.surfaceAlt || '#1c2333'),
             padding: '8px 14px', borderRadius: 8, maxWidth: 400, overflow: 'auto', whiteSpace: 'pre-wrap',
           }}>
-            {this.state.error?.message || 'Erreur inconnue'}
+            {this.state.error?.message || traduire('plugin.erreurInconnue')}
           </code>
           <button onClick={() => this.setState({ hasError: false, error: null })} style={{
             padding: '8px 20px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 700,
             background: t.accent || '#58a6ff', color: '#fff', cursor: 'pointer',
           }}>
-            🔄 Réessayer
+            🔄 {traduire('plugin.reessayer')}
           </button>
         </div>
       );

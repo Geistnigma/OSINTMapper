@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './stores/authStore';
+import { I18nProvider, useT } from './i18n';
 
 // Pages
-import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Graph from './pages/Graph';
@@ -14,14 +14,16 @@ import Admin from './pages/Admin';
 // Auth guard component
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuthStore();
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d1117', color: '#e2e4ed' }}>Chargement...</div>;
+  const tr = useT();
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d1117', color: '#e2e4ed' }}>{tr('commun.chargement')}</div>;
   if (!user) return <Navigate to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} replace />;
   return children;
 }
 
 function AdminRoute({ children }) {
   const { user, loading } = useAuthStore();
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d1117', color: '#e2e4ed' }}>Chargement...</div>;
+  const tr = useT();
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d1117', color: '#e2e4ed' }}>{tr('commun.chargement')}</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'ADMIN') return <Navigate to="/dashboard" replace />;
   return children;
@@ -34,8 +36,10 @@ function App() {
 
   return (
     <Routes>
-      {/* Public */}
-      <Route path="/" element={<Landing />} />
+      {/* La racine mène directement à la connexion : il n'y a plus de page
+          d'accueil publique. L'inscription libre étant désactivée, elle ne
+          présentait rien qu'un visiteur puisse faire. */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
 
       {/* Protected */}
@@ -45,13 +49,17 @@ function App() {
       <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
+  // Le fournisseur enveloppe le routeur : la langue doit être disponible dès
+  // l'écran de connexion, et jusque dans les gardes de route.
+  <I18nProvider>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </I18nProvider>
 );

@@ -2,29 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../stores/authStore';
 import { themes, Icons } from '../lib/theme';
+import { useT } from '../i18n';
+import SelecteurLangue from '../components/SelecteurLangue';
 
 export default function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { user, login, register, error, clearError, loading } = useAuthStore();
+  // `t` reste la PALETTE, comme partout dans ce dépôt ; la traduction est
+  // `tr`. Les intervertir casse silencieusement tous les styles du fichier.
   const t = themes.dark;
+  const tr = useT();
 
-  const [isRegister] = useState(false);
   const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '' });
 
   const redirectTo = params.get('redirect') || '/dashboard';
 
   useEffect(() => { if (user) navigate(redirectTo); }, [user]);
-  useEffect(() => { clearError(); }, [isRegister]);
+  useEffect(() => { clearError(); }, []);
 
-  const handleSubmit = async () => {
-    if (isRegister) {
-      const ok = await register(form.username, form.email || null, form.password, form.displayName || form.username);
-      if (ok) navigate(redirectTo);
-    } else {
-      const ok = await login(form.username, form.password);
-      if (ok) navigate(redirectTo);
-    }
+  // L'inscription est désactivée côté serveur (l'administrateur crée les
+  // comptes) et `isRegister` n'avait pas de setter : toute cette branche était
+  // inatteignable.
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
+    if (await login(form.username, form.password)) navigate(redirectTo);
   };
 
   const inp = { width: '100%', padding: '10px 14px', background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, fontSize: 14, outline: 'none' };
@@ -39,33 +41,29 @@ export default function Login() {
             OSINT<span style={{ color: t.accent }}>Mapper</span>
           </h1>
           <p style={{ color: t.textSecondary, fontSize: 13, marginTop: 4 }}>
-            {isRegister ? 'Créer un compte' : 'Se connecter'}
+            {tr('login.sousTitre')}
           </p>
+          {/* Le seul écran accessible sans compte : si le choix de langue n'est
+              pas ici, personne ne peut le faire avant de s'être connecté. */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+            <SelecteurLangue t={t} />
+          </div>
         </div>
 
         {/* Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Un vrai <form> : la soumission était gérée à la main sur onKeyDown,
+            et sans attributs autoComplete les gestionnaires de mots de passe
+            ne savaient ni remplir ni enregistrer les identifiants. */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>Identifiant</label>
-            <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="johndoe" style={inp} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+            <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>{tr('login.identifiant')}</label>
+            <input name="username" autoComplete="username" autoFocus value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="johndoe" style={inp} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
 
-          {isRegister && (
-            <>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>Nom affiché <span style={{ color: t.textMuted }}>(optionnel)</span></label>
-                <input value={form.displayName} onChange={e => setForm({ ...form, displayName: e.target.value })} placeholder="John Doe" style={inp} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>Email <span style={{ color: t.textMuted }}>(optionnel)</span></label>
-                <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" style={inp} />
-              </div>
-            </>
-          )}
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>Mot de passe</label>
-            <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="••••••" style={inp} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+            <label style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: 6 }}>{tr('login.motDePasse')}</label>
+            <input type="password" name="password" autoComplete="current-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="••••••" style={inp} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
 
           {error && (
@@ -75,7 +73,7 @@ export default function Login() {
           )}
 
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={!form.username || !form.password}
             style={{
               padding: '12px 20px',
@@ -86,16 +84,9 @@ export default function Login() {
               marginTop: 4,
             }}
           >
-            {isRegister ? 'Créer le compte' : 'Se connecter'}
+            {tr('login.bouton')}
           </button>
-        </div>
-
-        {/* Back to landing */}
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: 11 }}>
-            ← Retour à l'accueil
-          </button>
-        </div>
+        </form>
       </div>
     </div>
   );

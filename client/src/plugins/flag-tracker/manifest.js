@@ -4,6 +4,7 @@ export default {
   id: 'flag-tracker',
   name: 'Flag Tracker',
   version: '2.0.0',
+  sdkVersion: '2.0.0',
   description: 'Suivi des flags CTF intégré au graphe. Marquez des entités comme flags, générez le format avec pattern configurable, gérez vos challenges.',
   author: 'Core',
   icon: '🚩',

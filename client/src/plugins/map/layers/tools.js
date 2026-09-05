@@ -1,4 +1,5 @@
 import { haversine, fmtDist } from '../utils.js';
+import { traduire } from '../../../i18n';
 
 /**
  * Render radius circles with individual delete on click.
@@ -15,7 +16,7 @@ export function renderRadiusCircles(L, map, circles, onRemove) {
     L.marker([c.lat, c.lng], {
       icon: L.divIcon({
         className: '', iconSize: [0, 0],
-        html: `<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer" title="Clic pour supprimer">${fmtDist(c.radius)} ✕</div>`,
+        html: `<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer" title="${traduire('carte.clicSupprimer')}">${fmtDist(c.radius)} ✕</div>`,
       }),
     }).addTo(layer).on('click', () => onRemove(c.id));
 

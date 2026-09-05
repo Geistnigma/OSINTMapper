@@ -4,6 +4,7 @@ export default {
   id: 'map',
   name: 'Carte géographique',
   version: '3.0.0',
+  sdkVersion: '2.0.0',
   description: 'Carte interactive avec points géolocalisés, trajectoires chronologiques et flèches directionnelles entre les points datés.',
   author: 'Core',
   icon: '🗺️',

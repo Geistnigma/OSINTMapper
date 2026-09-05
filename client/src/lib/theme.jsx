@@ -1,7 +1,54 @@
+/**
+ * Palette de l'application.
+ *
+ * Cette définition était dupliquée à l'identique dans OSINTMapper.jsx : deux
+ * sources de vérité pour les mêmes couleurs. Le monolithe l'importe désormais.
+ *
+ * Les clés `danger`, `success`, `warning` et `info` sont des jetons
+ * SÉMANTIQUES : elles disent ce que la couleur signifie, pas de quelle teinte
+ * il s'agit. Toute couleur d'état doit passer par elles - sans quoi un thème ne
+ * pilote rien, ce qui était le cas (174 valeurs en dur contre 12 usages du
+ * thème). Les couleurs de CATÉGORIE d'entité (lib/constants.jsx) n'en font
+ * volontairement pas partie : elles identifient une donnée, pas un état, et
+ * doivent rester stables d'un thème à l'autre.
+ */
 export const themes = {
-  dark: { bg:"#0d1117",surface:"#161b22",surfaceAlt:"#1c2333",border:"#2a3140",borderHover:"#3d4868",text:"#e2e4ed",textSecondary:"#8b8fa8",textMuted:"#4e5568",accent:"#58a6ff",accentHover:"#79b8ff",canvasBg:"#0d1117",canvasGrid:"#1a2030",shadow:"rgba(0,0,0,0.6)",danger:"#f85149",success:"#3fb950",catHover:"#1f2937",itemBg:"#172030",itemHover:"#1e2d42",itemBorder:"#253044",tooltip:"#1e293b",tooltipBorder:"#334155" },
-  light: { bg:"#f6f8fa",surface:"#ffffff",surfaceAlt:"#f1f3f9",border:"#d8dee4",borderHover:"#bcc3ce",text:"#1f2328",textSecondary:"#656d76",textMuted:"#9ca3af",accent:"#0969da",accentHover:"#0550ae",canvasBg:"#f0f2f8",canvasGrid:"#dfe2e8",shadow:"rgba(0,0,0,0.08)",danger:"#cf222e",success:"#1a7f37",catHover:"#e8ebf0",itemBg:"#ffffff",itemHover:"#f0f3f9",itemBorder:"#e2e5f0",tooltip:"#ffffff",tooltipBorder:"#d1d5db" },
+  dark: { bg:"#0d1117",surface:"#161b22",surfaceAlt:"#1c2333",border:"#2a3140",borderHover:"#3d4868",text:"#e2e4ed",textSecondary:"#8b8fa8",textMuted:"#4e5568",accent:"#58a6ff",accentHover:"#79b8ff",canvasBg:"#0d1117",canvasGrid:"#1a2030",shadow:"rgba(0,0,0,0.6)",danger:"#ef4444",success:"#10b981",catHover:"#1f2937",itemBg:"#172030",itemHover:"#1e2d42",itemBorder:"#253044",tooltip:"#1e293b",tooltipBorder:"#334155" ,warning:"#f59e0b",info:"#58a6ff" },
+  light: { bg:"#f6f8fa",surface:"#ffffff",surfaceAlt:"#f1f3f9",border:"#d8dee4",borderHover:"#bcc3ce",text:"#1f2328",textSecondary:"#656d76",textMuted:"#9ca3af",accent:"#0969da",accentHover:"#0550ae",canvasBg:"#f0f2f8",canvasGrid:"#dfe2e8",shadow:"rgba(0,0,0,0.08)",danger:"#cf222e",success:"#1a7f37",catHover:"#e8ebf0",itemBg:"#ffffff",itemHover:"#f0f3f9",itemBorder:"#e2e5f0",tooltip:"#ffffff",tooltipBorder:"#d1d5db" ,warning:"#bf8700",info:"#0969da" },
 };
+
+/**
+ * Résout un identifiant de thème en palette utilisable.
+ *
+ * `om_theme` ne contient PAS seulement `dark` ou `light` : le graphe y écrit
+ * aussi les thèmes apportés par les plugins, préfixés (`themes:cafe`). Toute
+ * lecture directe de `themes[id]` rend donc `undefined` dès que l'utilisateur a
+ * choisi un thème de plugin - et l'écran plante à la première couleur lue.
+ * C'est exactement ce qui arrivait au tableau de bord, qui était le seul des
+ * trois écrans à ne pas avoir de repli.
+ *
+ * Le repli sur `dark` couvre aussi le cas d'un thème dont le plugin a été
+ * désactivé depuis. L'identifiant, lui, reste stocké tel quel : le thème
+ * revient si le plugin est réactivé.
+ *
+ * @param id    identifiant stocké (`dark`, `light`, `monplugin:cafe`…)
+ * @param extra palettes supplémentaires, typiquement `pluginEngine.getThemes()`
+ *              aplati en `{ id: colors }`. Les appelants qui n'ont pas accès au
+ *              moteur de plugins peuvent l'omettre.
+ */
+export function resolveTheme(id, extra) {
+  return (extra && extra[id]) || themes[id] || themes.dark;
+}
+
+/** Palettes des thèmes déclarés par les plugins activés, prêtes pour resolveTheme. */
+export function pluginPalettes(engine) {
+  const out = {};
+  if (!engine?.getThemes) return out;
+  for (const [id, th] of Object.entries(engine.getThemes())) {
+    if (th?.colors) out[id] = th.colors;
+  }
+  return out;
+}
 
 export const Icons = {
   search:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
@@ -25,6 +72,6 @@ export const Icons = {
 };
 
 export function useTheme() {
-  // This is a convenience — actual state is in uiStore
+  // This is a convenience - actual state is in uiStore
   return null;
 }

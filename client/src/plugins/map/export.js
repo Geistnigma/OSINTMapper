@@ -1,4 +1,7 @@
 import { fmtDate } from './utils.js';
+// Le contenu exporté suit la langue de qui exporte : le fichier part avec
+// l'analyste, pas avec l'instance.
+import { traduire } from '../../i18n';
 
 /** Trigger file download in browser */
 function download(content, filename, mime) {
@@ -14,13 +17,13 @@ function download(content, filename, mime) {
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 // ═══════════════════════════════════════════
-// KML — Google Earth / Google Maps / QGIS
+// KML - Google Earth / Google Maps / QGIS
 // ═══════════════════════════════════════════
 export function exportKML(geoPoints, segments, title = 'OSINTMapper') {
   const placemarks = geoPoints.map(p => `
     <Placemark>
       <name>${esc(p.label)}</name>
-      <description>${esc(p.source)}${p.date ? ' — ' + fmtDate(p.date) : ''}</description>
+      <description>${esc(p.source)}${p.date ? ' - ' + fmtDate(p.date) : ''}</description>
       <Style><IconStyle><color>ff${p.color.slice(5, 7)}${p.color.slice(3, 5)}${p.color.slice(1, 3)}</color><scale>1.0</scale></IconStyle></Style>
       <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>
       ${p.date ? `<TimeStamp><when>${new Date(p.date).toISOString()}</when></TimeStamp>` : ''}
@@ -28,7 +31,7 @@ export function exportKML(geoPoints, segments, title = 'OSINTMapper') {
 
   const trajectoryLine = segments.length > 0 ? `
     <Placemark>
-      <name>Trajectoire</name>
+      <name>${traduire('carte.export.trajectoire')}</name>
       <Style><LineStyle><color>ff0000ff</color><width>3</width></LineStyle></Style>
       <LineString>
         <coordinates>${[segments[0].from, ...segments.map(s => s.to)].map(p => `${p.lng},${p.lat},0`).join(' ')}</coordinates>
@@ -39,12 +42,12 @@ export function exportKML(geoPoints, segments, title = 'OSINTMapper') {
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>${esc(title)}</name>
-    <description>Exporté depuis OSINTMapper</description>
+    <description>${traduire('carte.export.depuis')}</description>
     <Folder>
-      <name>Points</name>
+      <name>${traduire('carte.export.points')}</name>
       ${placemarks}
     </Folder>
-    ${trajectoryLine ? `<Folder><name>Trajectoires</name>${trajectoryLine}</Folder>` : ''}
+    ${trajectoryLine ? `<Folder><name>${traduire('carte.export.trajectoires')}</name>${trajectoryLine}</Folder>` : ''}
   </Document>
 </kml>`;
 
@@ -52,7 +55,7 @@ export function exportKML(geoPoints, segments, title = 'OSINTMapper') {
 }
 
 // ═══════════════════════════════════════════
-// GeoJSON — Leaflet / Mapbox / QGIS / Kepler
+// GeoJSON - Leaflet / Mapbox / QGIS / Kepler
 // ═══════════════════════════════════════════
 export function exportGeoJSON(geoPoints, segments, title = 'OSINTMapper') {
   const features = [];
@@ -75,7 +78,7 @@ export function exportGeoJSON(geoPoints, segments, title = 'OSINTMapper') {
     features.push({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: coords },
-      properties: { name: 'Trajectoire', type: 'trajectory', pointCount: coords.length },
+      properties: { name: traduire('carte.export.trajectoire'), type: 'trajectory', pointCount: coords.length },
     });
   }
 
@@ -84,13 +87,13 @@ export function exportGeoJSON(geoPoints, segments, title = 'OSINTMapper') {
 }
 
 // ═══════════════════════════════════════════
-// GPX — GPS devices / Strava / Komoot / OsmAnd
+// GPX - GPS devices / Strava / Komoot / OsmAnd
 // ═══════════════════════════════════════════
 export function exportGPX(geoPoints, segments, title = 'OSINTMapper') {
   const wpts = geoPoints.map(p => `
   <wpt lat="${p.lat}" lon="${p.lng}">
     <name>${esc(p.label)}</name>
-    <desc>${esc(p.source)}${p.date ? ' — ' + fmtDate(p.date) : ''}</desc>
+    <desc>${esc(p.source)}${p.date ? ' - ' + fmtDate(p.date) : ''}</desc>
     ${p.date ? `<time>${new Date(p.date).toISOString()}</time>` : ''}
   </wpt>`).join('\n');
 
@@ -101,7 +104,7 @@ export function exportGPX(geoPoints, segments, title = 'OSINTMapper') {
     ).join('\n');
     track = `
   <trk>
-    <name>Trajectoire</name>
+    <name>${traduire('carte.export.trajectoire')}</name>
     <trkseg>
 ${trkpts}
     </trkseg>
@@ -125,14 +128,14 @@ ${track}
 }
 
 // ═══════════════════════════════════════════
-// CSV — Excel / Google Sheets / tout
+// CSV - Excel / Google Sheets / tout
 // ═══════════════════════════════════════════
 export function exportCSV(geoPoints, segments) {
   const header = 'label,latitude,longitude,date,type,subtype,source,color,entityId';
   const rows = geoPoints.map(p =>
     `"${(p.label || '').replace(/"/g, '""')}",${p.lat},${p.lng},"${p.date || ''}","${p.type || ''}","${p.subtype || ''}","${p.source || ''}","${p.color || ''}","${p.id || ''}"`
   );
-  download([header, ...rows].join('\n'), 'osintmapper_points.csv', 'text/csv');
+  download([header, ...rows].join('\n'), 'OSINTMapper_points.csv', 'text/csv');
 }
 
 // ═══════════════════════════════════════════

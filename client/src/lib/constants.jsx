@@ -1,10 +1,11 @@
+import { getLocale } from '../i18n';
 // ============================================================================
-// OSINTMapper Constants — Entity types, Link types, Helpers
+// OSINTMapper Constants - Entity types, Link types, Helpers
 // Extracted from v1 monolith
 // ============================================================================
 
 // ============================================================================
-// CATEGORIES — 17 categories with sub-items
+// CATEGORIES - 18 catégories (« Autre » reste en dernier : c'est le fourre-tout)
 // ============================================================================
 
 export const CATEGORIES = [
@@ -132,44 +133,6 @@ export const CATEGORIES = [
     { id: "fin_transaction", label: "Transaction", desc: "Mouvement financier", color: "#3b82f6" },
     { id: "fin_paypal", label: "PayPal", desc: "Compte PayPal", color: "#0070ba" },
   ]},
-  { id: "custom", label: "Autre (personnalisé)", icon: "⭐", color: "#94a3b8", items: [
-    { id: "custom_blank", label: "Bloc vide", desc: "Entièrement personnalisable", color: "#94a3b8" },
-    { id: "custom_note", label: "Note", desc: "Note libre / mémo", color: "#f59e0b" },
-    { id: "custom_flag", label: "Flag / Alerte", desc: "Point d'attention", color: "#ef4444" },
-  ]},
-  { id: "judicial", label: "Judiciaire", icon: "⚖️", color: "#7c3aed", items: [
-    { id: "jud_procedure", label: "Procédure", desc: "Dossier judiciaire / enquête", color: "#7c3aed" },
-    { id: "jud_pv", label: "Procès-verbal", desc: "PV d'audition, constatation", color: "#6366f1" },
-    { id: "jud_mandat", label: "Mandat / Réquisition", desc: "Mandat de perquisition, réquisition opérateur", color: "#f59e0b" },
-    { id: "jud_scelle", label: "Scellé", desc: "Objet mis sous scellé", color: "#64748b" },
-    { id: "jud_garde_a_vue", label: "Garde à vue", desc: "Mesure de GAV", color: "#ef4444" },
-    { id: "jud_mis_en_cause", label: "Mis en cause", desc: "Personne mise en cause", color: "#dc2626" },
-    { id: "jud_temoin", label: "Témoin", desc: "Témoin auditionné", color: "#3b82f6" },
-    { id: "jud_victime", label: "Victime", desc: "Personne victime", color: "#f59e0b" },
-    { id: "jud_plainte", label: "Plainte", desc: "Dépôt de plainte", color: "#8b5cf6" },
-  ]},
-  { id: "infraction", label: "Infractions (NATINF)", icon: "🚨", color: "#dc2626", items: [
-    { id: "inf_vol", label: "Vol / Recel", desc: "Vol simple, aggravé, recel de biens", color: "#ef4444" },
-    { id: "inf_escroquerie", label: "Escroquerie", desc: "Escroquerie, abus de confiance, filouterie", color: "#f59e0b" },
-    { id: "inf_stupefiants", label: "Stupéfiants", desc: "Usage, détention, cession, trafic, import/export", color: "#10b981" },
-    { id: "inf_violence", label: "Violences", desc: "Volontaires, involontaires, en réunion, avec arme", color: "#dc2626" },
-    { id: "inf_menace", label: "Menaces / Harcèlement", desc: "Menaces de mort, harcèlement moral/sexuel, cyberharcèlement", color: "#f97316" },
-    { id: "inf_sexuel", label: "Atteintes sexuelles", desc: "Agression sexuelle, viol, exhibition, corruption de mineur", color: "#be123c" },
-    { id: "inf_homicide", label: "Homicide", desc: "Meurtre, assassinat, homicide involontaire", color: "#7f1d1d" },
-    { id: "inf_cyber", label: "Cybercriminalité", desc: "Accès frauduleux STAD, atteinte aux données, ransomware", color: "#3b82f6" },
-    { id: "inf_faux", label: "Faux et usage de faux", desc: "Faux documents, usurpation d'identité", color: "#8b5cf6" },
-    { id: "inf_ame", label: "Association de malfaiteurs", desc: "AME, bande organisée", color: "#991b1b" },
-    { id: "inf_blanchiment", label: "Blanchiment", desc: "Blanchiment de capitaux, non-justification de ressources", color: "#16a34a" },
-    { id: "inf_routier", label: "Infractions routières", desc: "CEA, défaut de permis, refus d'obtempérer, délit de fuite", color: "#64748b" },
-    { id: "inf_degradation", label: "Dégradation / Destruction", desc: "Dégradation volontaire, incendie, destruction", color: "#78716c" },
-    { id: "inf_tef", label: "Travail illégal / TEF", desc: "Travail dissimulé, TEH, exploitation", color: "#0891b2" },
-    { id: "inf_arme", label: "Infraction armes", desc: "Détention, port, acquisition, fabrication illicite", color: "#b91c1c" },
-    { id: "inf_terrorisme", label: "Terrorisme", desc: "Association de malfaiteurs terroriste, apologie, financement", color: "#1e1b4b" },
-    { id: "inf_atteinte_biens", label: "Atteinte aux biens", desc: "Extorsion, chantage, abus de faiblesse", color: "#a16207" },
-    { id: "inf_famille", label: "Infractions familiales", desc: "Non-représentation d'enfant, abandon de famille, bigamie", color: "#ec4899" },
-    { id: "inf_environnement", label: "Atteinte environnement", desc: "Pollution, déchets illicites, cruauté animale", color: "#059669" },
-    { id: "inf_autre", label: "Autre infraction", desc: "Code NATINF à préciser dans les métadonnées", color: "#94a3b8" },
-  ]},
   { id: "evidence", label: "Preuve / Indice", icon: "🔬", color: "#0891b2", items: [
     { id: "evi_trace_adn", label: "Trace ADN", desc: "Prélèvement / profil ADN", color: "#10b981" },
     { id: "evi_empreinte", label: "Empreinte", desc: "Empreinte digitale / palmaire", color: "#06b6d4" },
@@ -182,13 +145,10 @@ export const CATEGORIES = [
     { id: "evi_photo_scene", label: "Photo de scène", desc: "Cliché ITT, scène de crime", color: "#ec4899" },
     { id: "evi_objet", label: "Objet saisi", desc: "Objet matériel collecté", color: "#64748b" },
   ]},
-  { id: "telecom", label: "Télécommunications", icon: "📡", color: "#0284c7", items: [
-    { id: "tel_antenne", label: "Antenne relais", desc: "BTS / station de base", color: "#0284c7" },
-    { id: "tel_bornage", label: "Bornage", desc: "Cellule de bornage identifiée", color: "#0891b2" },
-    { id: "tel_sms", label: "SMS", desc: "Message texte intercepté / requis", color: "#06b6d4" },
-    { id: "tel_appel", label: "Appel", desc: "Communication vocale", color: "#3b82f6" },
-    { id: "tel_data", label: "Donnée data", desc: "Trafic data / navigation", color: "#8b5cf6" },
-    { id: "tel_operateur", label: "Opérateur", desc: "Orange, SFR, Bouygues, Free", color: "#64748b" },
+  { id: "custom", label: "Autre (personnalisé)", icon: "⭐", color: "#94a3b8", items: [
+    { id: "custom_blank", label: "Bloc vide", desc: "Entièrement personnalisable", color: "#94a3b8" },
+    { id: "custom_note", label: "Note", desc: "Note libre / mémo", color: "#f59e0b" },
+    { id: "custom_flag", label: "Flag / Alerte", desc: "Point d'attention", color: "#ef4444" },
   ]},
 ];
 
@@ -196,17 +156,20 @@ export const ALL_ITEMS = {};
 CATEGORIES.forEach(c => c.items.forEach(it => { ALL_ITEMS[it.id] = { ...it, category: c.id, categoryLabel: c.label, categoryIcon: c.icon }; }));
 
 
+// Les couleurs de LINK_TYPES identifient un TYPE de relation - comme les
+// catégories d'entité, c'est de l'identité de donnée : elles restent stables
+// d'un thème à l'autre. Seuls les ÉTATS (fiabilité, statut) suivent le thème.
 export const LINK_TYPES = [
-  { id: "related", label: "est lié à", color: "#94a3b8", dash: "" },
-  { id: "owns", label: "propriétaire de", color: "#6366f1", dash: "" },
-  { id: "located", label: "localisé à", color: "#10b981", dash: "" },
-  { id: "uses", label: "utilise", color: "#3b82f6", dash: "" },
-  { id: "knows", label: "connaît", color: "#f59e0b", dash: "" },
-  { id: "member", label: "membre de", color: "#ef4444", dash: "" },
-  { id: "alias", label: "alias de", color: "#8b5cf6", dash: "6 3" },
-  { id: "contacted", label: "a contacté", color: "#ec4899", dash: "" },
-  { id: "suspected", label: "suspecté de", color: "#f97316", dash: "4 4" },
-  { id: "custom", label: "personnalisé", color: "#94a3b8", dash: "" },
+  { id: "related", label: "est lié à", color: "#94a3b8", dash: "", icon: "🔗" },
+  { id: "owns", label: "propriétaire de", color: "#6366f1", dash: "", icon: "🔑" },
+  { id: "located", label: "localisé à", color: "#10b981", dash: "", icon: "📍" },
+  { id: "uses", label: "utilise", color: "#3b82f6", dash: "", icon: "⚡" },
+  { id: "knows", label: "connaît", color: "#f59e0b", dash: "", icon: "🤝" },
+  { id: "member", label: "membre de", color: "#ef4444", dash: "", icon: "👥" },
+  { id: "alias", label: "alias de", color: "#8b5cf6", dash: "6 3", icon: "🎭" },
+  { id: "contacted", label: "a contacté", color: "#ec4899", dash: "", icon: "📞" },
+  { id: "suspected", label: "suspecté de", color: "#f97316", dash: "4 4", icon: "⚠️" },
+  { id: "custom", label: "personnalisé", color: "#94a3b8", dash: "", icon: "🔗" },
 ];
 
 // PHONE PREFIX → FLAG
@@ -218,14 +181,18 @@ const ADDR_ABBR={"imp.":"impasse","imp ":"impasse ","bd ":"boulevard ","bd.":"bo
 function normalizeAddress(addr){let s=addr;for(const[ab,full]of Object.entries(ADDR_ABBR)){s=s.replace(new RegExp("\\b"+ab.replace(".","\\."),"gi"),full);}return s;}
 
 // DATE FORMATTER FR
-export function fmtDate(d){if(!d)return"";try{const dt=new Date(d);return dt.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+dt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});}catch{return"";}}
-export function fmtDateShort(d){if(!d)return"";try{return new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});}catch{return"";}}
+export function fmtDate(d){if(!d)return"";try{const dt=new Date(d);return dt.toLocaleDateString(getLocale(),{day:"2-digit",month:"2-digit",year:"numeric"})+" "+dt.toLocaleTimeString(getLocale(),{hour:"2-digit",minute:"2-digit"});}catch{return"";}}
+export function fmtDateShort(d){if(!d)return"";try{return new Date(d).toLocaleDateString(getLocale(),{day:"2-digit",month:"2-digit",year:"numeric"});}catch{return"";}}
 
-const LINK_STRENGTHS = [
-  { id: "confirmed", label: "✓ Confirmé", desc: "70% et plus", width: 2.5, dash: "", opacity: 1, badge: "✓", badgeColor: "#10b981", min: 70 },
-  { id: "probable", label: "~ Probable", desc: "30% à 69%", width: 1.8, dash: "", opacity: 0.8, badge: "~", badgeColor: "#f59e0b", min: 30 },
-  { id: "possible", label: "? Possible", desc: "1% à 29%", width: 1.2, dash: "6 4", opacity: 0.5, badge: "?", badgeColor: "#ef4444", min: 1 },
-  { id: "unknown", label: "— Non qualifié", desc: "0%", width: 1.5, dash: "2 3", opacity: 0.6, badge: "—", badgeColor: "#64748b", min: 0 },
+// `tone` est un JETON du thème (voir lib/theme.jsx), pas une teinte : la
+// fiabilité d'un lien est un ÉTAT, elle doit suivre le thème actif. Les
+// couleurs de catégorie ci-dessus, elles, identifient une donnée et restent
+// stables d'un thème à l'autre.
+export const LINK_STRENGTHS = [
+  { id: "confirmed", label: "✓ Confirmé", desc: "70% et plus", width: 2.5, dash: "", opacity: 1, badge: "✓", tone: "success", min: 70 },
+  { id: "probable", label: "~ Probable", desc: "30% à 69%", width: 1.8, dash: "", opacity: 0.8, badge: "~", tone: "warning", min: 30 },
+  { id: "possible", label: "? Possible", desc: "1% à 29%", width: 1.2, dash: "6 4", opacity: 0.5, badge: "?", tone: "danger", min: 1 },
+  { id: "unknown", label: "- Non qualifié", desc: "0%", width: 1.5, dash: "2 3", opacity: 0.6, badge: "-", tone: "textMuted", min: 0 },
 ];
 export function getStrengthFromConfidence(conf) {
   if (conf >= 70) return LINK_STRENGTHS[0];

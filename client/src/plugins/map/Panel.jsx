@@ -4,6 +4,7 @@ import { renderMarkers } from './layers/markers.js';
 import { renderTrajectories } from './layers/trajectories.js';
 import { renderRadiusCircles, renderDistanceLine, renderFreehand } from './layers/tools.js';
 import { EXPORT_FORMATS } from './export.js';
+import { useT } from '../../i18n';
 
 // ═══ SMALL COMPONENTS ═══
 // Theme-aware button
@@ -17,17 +18,21 @@ function Btn({ active, color, children, onClick, style, t }) {
   </button>;
 }
 
+// Liste au niveau module : `tr` n'y existe pas, et une constante figée à
+// l'import ne suivrait de toute façon pas un changement de langue. On ne garde
+// donc que l'identifiant et la valeur ; le libellé se résout au rendu.
 const TRAJ_COLORS = [
-  { id: 'auto', label: 'Auto (gradient)', value: null },
-  { id: 'red', label: 'Rouge', value: '#ef4444' },
-  { id: 'blue', label: 'Bleu', value: '#3b82f6' },
-  { id: 'green', label: 'Vert', value: '#10b981' },
-  { id: 'orange', label: 'Orange', value: '#f59e0b' },
-  { id: 'purple', label: 'Violet', value: '#a855f7' },
-  { id: 'white', label: 'Blanc', value: '#ffffff' },
+  { id: 'auto', cle: 'auto', value: null },
+  { id: 'red', cle: 'rouge', value: '#ef4444' },
+  { id: 'blue', cle: 'bleu', value: '#3b82f6' },
+  { id: 'green', cle: 'vert', value: '#10b981' },
+  { id: 'orange', cle: 'orange', value: '#f59e0b' },
+  { id: 'purple', cle: 'violet', value: '#a855f7' },
+  { id: 'white', cle: 'blanc', value: '#ffffff' },
 ];
 
 export default function MapPanel({ entities, links, theme: t, onClose, settings, selectedId, setSelectedId }) {
+  const tr = useT();
   const mapElRef = useRef(null);
   const mapRef = useRef(null);   // Leaflet map instance
   const LRef = useRef(null);     // Leaflet library
@@ -262,17 +267,15 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
   const captureMap = useCallback(async () => {
     if (!mapElRef.current) return;
     try {
-      // Dynamic import html2canvas
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      document.head.appendChild(script);
-      await new Promise(r => { script.onload = r; });
-      const canvas = await window.html2canvas(mapElRef.current, { useCORS: true, allowTaint: true });
+      // html2canvas est une dépendance du projet : le charger depuis un CDN
+      // dupliquait une lib déjà présente, sans SRI et sans marcher hors ligne.
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(mapElRef.current, { useCORS: true, allowTaint: true });
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
-      a.download = 'osintmapper_carte.png';
+      a.download = 'OSINTMapper_carte.png';
       a.click();
-    } catch (e) { console.error('Capture error:', e); alert('Erreur de capture. Réessayez.'); }
+    } catch (e) { console.error('Capture error:', e); alert(tr('carte.erreurCapture')); }
   }, []);
 
   // Street View
@@ -296,7 +299,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>🗺️</span>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>Carte géographique</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{tr('carte.titre')}</div>
             <div style={{ fontSize: 10, color: t.textMuted }}>{geoPoints.length} pts · {datedPoints.length} datés · {segments.length} traj.</div>
           </div>
         </div>
@@ -306,20 +309,20 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
             <Btn t={t} key={tp} active={tile === tp} onClick={() => setTile(tp)}>{tp === 'osm' ? '🗺️' : tp === 'dark' ? '🌑' : '🛰️'} {tp.charAt(0).toUpperCase() + tp.slice(1)}</Btn>
           ))}
           <div style={{ width: 1, height: 18, background: t.border }} />
-          <Btn t={t} active={showTraj} color="#3b82f6" onClick={() => setShowTraj(!showTraj)}>→ Traj</Btn>
+          <Btn t={t} active={showTraj} color="#3b82f6" onClick={() => setShowTraj(!showTraj)}>→ {tr('carte.trajectoire')}</Btn>
           <Btn t={t} active={showLabels} color="#10b981" onClick={() => setShowLabels(!showLabels)}>Aa</Btn>
 
           {/* Trajectory color */}
           {showTraj && segments.length > 0 && (
             <select value={trajColor || 'auto'} onChange={e => setTrajColor(e.target.value === 'auto' ? null : e.target.value)}
               style={{ padding: '3px 6px', fontSize: 10, background: t.surfaceAlt, color: trajColor || '#93c5fd', border: `1px solid ${t.border}`, borderRadius: 4 }}>
-              {TRAJ_COLORS.map(c => <option key={c.id} value={c.id === 'auto' ? 'auto' : c.value}>{c.label}</option>)}
+              {TRAJ_COLORS.map(c => <option key={c.id} value={c.id === 'auto' ? 'auto' : c.value}>{tr('carte.couleur.' + c.cle)}</option>)}
             </select>
           )}
           <div style={{ width: 1, height: 18, background: t.border }} />
 
           {/* Radius */}
-          <Btn t={t} active={tool === 'radius'} color="#f59e0b" onClick={() => selectTool('radius')}>⊙ Rayon</Btn>
+          <Btn t={t} active={tool === 'radius'} color="#f59e0b" onClick={() => selectTool('radius')}>⊙ {tr('carte.rayon')}</Btn>
           {tool === 'radius' && (
             <select value={radiusSize} onChange={e => setRadiusSize(+e.target.value)} style={{ padding: '3px 6px', fontSize: 10, background: t.surfaceAlt, color: '#f59e0b', border: '1px solid #f59e0b60', borderRadius: 4 }}>
               {RADIUS_OPTIONS.map(r => <option key={r} value={r}>{fmtDist(r)}</option>)}
@@ -328,25 +331,25 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
           {radiusCircles.length > 0 && <Btn t={t} onClick={() => setRadiusCircles([])} style={{ color: '#f59e0b' }}>✕ {radiusCircles.length}</Btn>}
 
           {/* Distance */}
-          <Btn t={t} active={tool === 'distance'} color="#ef4444" onClick={() => selectTool('distance')}>📏 Distance</Btn>
+          <Btn t={t} active={tool === 'distance'} color="#ef4444" onClick={() => selectTool('distance')}>📏 {tr('carte.distance')}</Btn>
           {tool === 'distance' && distPoints.length > 0 && <Btn t={t} onClick={undoDistPoint} style={{ color: '#ef4444' }}>↩</Btn>}
           {distTotal !== null && <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>{fmtDist(distTotal)}</span>}
           {distPoints.length > 0 && <Btn t={t} onClick={clearDist} style={{ color: '#ef4444' }}>✕</Btn>}
 
           {/* Freehand */}
-          <Btn t={t} active={tool === 'freehand'} color="#a855f7" onClick={() => selectTool('freehand')}>✏️ Libre</Btn>
+          <Btn t={t} active={tool === 'freehand'} color="#a855f7" onClick={() => selectTool('freehand')}>✏️ {tr('carte.libre')}</Btn>
           {freehandPts.length > 0 && <Btn t={t} onClick={clearFreehand} style={{ color: '#a855f7' }}>✕</Btn>}
           <div style={{ width: 1, height: 18, background: t.border }} />
 
           {/* Animation */}
           {datedPoints.length >= 2 && (
             animating
-              ? <Btn t={t} active color="#a855f7" onClick={() => { setAnimating(false); setAnimStep(0); clearInterval(animTimer.current); }}>⏹ Stop</Btn>
-              : <Btn t={t} color="#a855f7" onClick={() => { setAnimating(true); setAnimStep(0); }}>▶ Animer</Btn>
+              ? <Btn t={t} active color="#a855f7" onClick={() => { setAnimating(false); setAnimStep(0); clearInterval(animTimer.current); }}>⏹ {tr('carte.stop')}</Btn>
+              : <Btn t={t} color="#a855f7" onClick={() => { setAnimating(true); setAnimStep(0); }}>▶ {tr('carte.animer')}</Btn>
           )}
 
           {/* Date filter */}
-          {dateRange && <Btn t={t} active={dateFilter} color="#06b6d4" onClick={() => { setDateFilter(!dateFilter); if (!dateFilter) { setDateMin(dateRange.min); setDateMax(dateRange.max); } }}>📅 Filtrer</Btn>}
+          {dateRange && <Btn t={t} active={dateFilter} color="#06b6d4" onClick={() => { setDateFilter(!dateFilter); if (!dateFilter) { setDateMin(dateRange.min); setDateMax(dateRange.max); } }}>📅 {tr('carte.filtrer')}</Btn>}
 
           <div style={{ width: 1, height: 18, background: t.border }} />
 
@@ -354,17 +357,17 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && searchAddress()}
-              placeholder="🔍 Rechercher une adresse..."
+              placeholder={tr('carte.rechercherAdresse')}
               style={{ padding: '4px 10px', fontSize: 11, background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 6, width: 180, outline: 'none' }} />
             <Btn t={t} onClick={searchAddress} style={{ padding: '4px 8px' }}>{searching ? '...' : '🔍'}</Btn>
           </div>
 
           {/* Capture PNG */}
-          <Btn t={t} onClick={captureMap}>📸 PNG</Btn>
+          <Btn t={t} onClick={captureMap}>📸 {tr('carte.png')}</Btn>
 
           {/* Export */}
           <div style={{ position: 'relative' }}>
-            <Btn t={t} active={showExport} color="#10b981" onClick={() => setShowExport(!showExport)}>📥 Export</Btn>
+            <Btn t={t} active={showExport} color="#10b981" onClick={() => setShowExport(!showExport)}>📥 {tr('carte.export')}</Btn>
             {showExport && (
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 10, minWidth: 220, overflow: 'hidden' }}>
                 <div style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>Exporter {geoPoints.length} points</div>
@@ -383,7 +386,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
             )}
           </div>
 
-          <Btn t={t} onClick={onClose}>✕ Fermer</Btn>
+          <Btn t={t} onClick={onClose}>✕ {tr('carte.fermer')}</Btn>
         </div>
       </div>
 
@@ -402,9 +405,9 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
       {tool && (
         <div style={{ padding: '5px 16px', background: tool === 'radius' ? '#f59e0b10' : tool === 'distance' ? '#ef444410' : '#a855f710', borderBottom: `1px solid ${tool === 'radius' ? '#f59e0b30' : tool === 'distance' ? '#ef444430' : '#a855f730'}` }}>
           <span style={{ fontSize: 11, color: tool === 'radius' ? '#f59e0b' : tool === 'distance' ? '#ef4444' : '#a855f7', fontWeight: 600 }}>
-            {tool === 'radius' && `⊙ Cliquez pour poser un cercle de ${fmtDist(radiusSize)} — cliquez un label ✕ pour le supprimer`}
-            {tool === 'distance' && `📏 Cliquez pour poser des points de mesure — multi-points supporté`}
-            {tool === 'freehand' && '✏️ Maintenez le clic et dessinez sur la carte — la distance sera calculée'}
+            {tool === 'radius' && tr('carte.aideRayon', { taille: fmtDist(radiusSize) })}
+            {tool === 'distance' && tr('carte.aideDistance')}
+            {tool === 'freehand' && tr('carte.aideLibre')}
           </span>
         </div>
       )}
@@ -427,7 +430,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
             {/* Animation progress */}
             {animating && (
               <div style={{ padding: '10px 14px', borderBottom: `1px solid ${t.border}`, background: '#a855f710' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>▶ ANIMATION</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>▶ {tr('carte.animation')}</div>
                 <div style={{ background: t.bg, borderRadius: 4, height: 6, overflow: 'hidden' }}>
                   <div style={{ width: `${((animStep + 1) / Math.max(segments.length, 1)) * 100}%`, height: '100%', background: '#a855f7', transition: 'width 0.3s' }} />
                 </div>
@@ -466,7 +469,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
             {/* Undated */}
             {undatedPoints.length > 0 && (
               <div style={{ padding: '10px 14px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', marginBottom: 6 }}>📍 Sans date ({undatedPoints.length})</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', marginBottom: 6 }}>📍 {tr('carte.sansDate')} ({undatedPoints.length})</div>
                 {undatedPoints.map((p, i) => (
                   <div key={p.id + '_u' + i} onClick={() => setSelectedId?.(p.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', borderBottom: i < undatedPoints.length - 1 ? `1px solid ${t.border}` : 'none' }}>
                     <div style={{ width: 7, height: 7, borderRadius: 4, background: p.color, flexShrink: 0 }} />
@@ -485,7 +488,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
       {/* Search results dropdown */}
       {searchResults.length > 0 && (
         <div style={{ position: 'absolute', top: 52, left: 16, zIndex: 10, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxWidth: 360, overflow: 'hidden' }}>
-          <div style={{ padding: '6px 12px', borderBottom: `1px solid ${t.border}`, fontSize: 10, color: t.textMuted, fontWeight: 700 }}>RÉSULTATS</div>
+          <div style={{ padding: '6px 12px', borderBottom: `1px solid ${t.border}`, fontSize: 10, color: t.textMuted, fontWeight: 700 }}>{tr('carte.resultats')}</div>
           {searchResults.map((r, i) => (
             <button key={i} onClick={() => { mapRef.current?.setView([+r.lat, +r.lon], 16); setSearchResults([]); }}
               style={{ display: 'block', width: '100%', padding: '8px 12px', background: 'transparent', border: 'none', borderBottom: `1px solid ${t.border}`, color: t.text, cursor: 'pointer', textAlign: 'left', fontSize: 11 }}
@@ -494,7 +497,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
               <div style={{ fontSize: 9, color: t.textMuted }}>{(+r.lat).toFixed(5)}, {(+r.lon).toFixed(5)}</div>
             </button>
           ))}
-          <button onClick={() => setSearchResults([])} style={{ width: '100%', padding: '6px', background: t.surfaceAlt, border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: 10 }}>Fermer</button>
+          <button onClick={() => setSearchResults([])} style={{ width: '100%', padding: '6px', background: t.surfaceAlt, border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: 10 }}>{tr('carte.fermer')}</button>
         </div>
       )}
 
@@ -502,7 +505,7 @@ export default function MapPanel({ entities, links, theme: t, onClose, settings,
       {streetView && (
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', zIndex: 10, display: 'flex', flexDirection: 'column', borderTop: `2px solid ${t.accent}` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: t.surface, borderBottom: `1px solid ${t.border}` }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>🛣️ Street View — {streetView.lat.toFixed(5)}, {streetView.lng.toFixed(5)}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>🛣️ Street View - {streetView.lat.toFixed(5)}, {streetView.lng.toFixed(5)}</span>
             <div style={{ display: 'flex', gap: 6 }}>
               <a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${streetView.lat},${streetView.lng}`} target="_blank" rel="noopener"
                 style={{ padding: '4px 12px', background: '#3b82f620', border: '1px solid #3b82f660', borderRadius: 6, color: '#3b82f6', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>

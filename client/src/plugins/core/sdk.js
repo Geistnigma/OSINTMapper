@@ -1,5 +1,5 @@
 /**
- * OSINTMapper Plugin SDK — Type definitions & documentation.
+ * OSINTMapper Plugin SDK - Type definitions & documentation.
  * 
  * A plugin is a folder in /plugins/ with:
  *   - manifest.js   → metadata, hooks, settings
@@ -19,7 +19,7 @@
  * @property {Array} stickers      - All stickers [{id, emoji, label, x, y}]
  * @property {Array} postits       - All post-its [{id, text, color, x, y, w, h}]
  * 
- * MUTATIONS (call to modify data — synced via Yjs to all collaborators):
+ * MUTATIONS (call to modify data - synced via Yjs to all collaborators):
  * @property {Function} addEntity(subItemId, x, y)         - Add entity by subtype ID
  * @property {Function} updateEntity(id, updates)          - Update entity fields
  * @property {Function} deleteEntity(id)                   - Delete entity

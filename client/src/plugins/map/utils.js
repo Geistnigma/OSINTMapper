@@ -1,3 +1,4 @@
+import { getLocale } from '../../i18n';
 /** Haversine distance in meters */
 export function haversine(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -13,8 +14,8 @@ export function fmtDate(d) {
   try {
     const dt = new Date(d);
     const hasTime = String(d).includes('T') && String(d).split('T')[1];
-    if (hasTime) return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (hasTime) return dt.toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + dt.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' });
+    return dt.toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
   } catch { return d; }
 }
 
@@ -71,20 +72,28 @@ export const TILES = {
 
 export const RADIUS_OPTIONS = [500, 1000, 2000, 5000, 10000];
 
-// Leaflet loader
+/**
+ * Charge Leaflet depuis le bundle.
+ *
+ * Auparavant un `<script src="https://unpkg.com/...">` était injecté à
+ * l'exécution : sans SRI (unpkg compromis = exécution arbitraire dans une
+ * application d'enquête), en signalant l'usage de l'outil à un tiers, et en
+ * rendant la carte inutilisable hors ligne. Leaflet est désormais une
+ * dépendance npm.
+ *
+ * L'import reste dynamique pour que Leaflet et son CSS (~150 ko) ne soient
+ * téléchargés qu'à l'ouverture de la carte - le plugin, lui, est chargé
+ * d'office par `import.meta.glob`.
+ */
 let leafletPromise = null;
 export function loadLeaflet() {
-  if (window.L) return Promise.resolve(window.L);
-  if (leafletPromise) return leafletPromise;
-  leafletPromise = new Promise((resolve, reject) => {
-    if (!document.querySelector('link[href*="leaflet"]')) {
-      const lk = document.createElement('link'); lk.rel = 'stylesheet';
-      lk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lk);
-    }
-    if (window.L) { resolve(window.L); return; }
-    const s = document.createElement('script'); s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    s.onload = () => resolve(window.L); s.onerror = () => reject(new Error('Leaflet load failed'));
-    document.head.appendChild(s);
-  });
+  if (!leafletPromise) {
+    leafletPromise = Promise.all([
+      import('leaflet'),
+      import('leaflet/dist/leaflet.css'),
+    ])
+      .then(([mod]) => mod.default || mod)
+      .catch(e => { leafletPromise = null; throw e; }); // réessayable après un échec
+  }
   return leafletPromise;
 }

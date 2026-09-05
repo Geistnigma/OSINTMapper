@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { themes } from '../lib/theme.jsx';
-import useAuthStore from '../stores/authStore';
+import { resolveTheme } from '../lib/theme.jsx';
+import { getLocale, useT } from '../i18n';
+import { messageErreur } from '../lib/api';
 
 const API = '/api/users';
 const ROLES = ['ADMIN', 'ANALYST', 'VIEWER'];
 const ROLE_COLORS = { ADMIN: '#ef4444', ANALYST: '#3b82f6', VIEWER: '#10b981' };
-const ROLE_LABELS = { ADMIN: '👑 Admin', ANALYST: '🔬 Analyste', VIEWER: '👁️ Lecteur' };
+const ROLE_LABELS = { ADMIN: 'Admin', ANALYST: 'Analyste', VIEWER: 'Lecteur' };
 
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 function fmtSize(b) { if (b > 1e9) return (b / 1e9).toFixed(1) + ' Go'; if (b > 1e6) return (b / 1e6).toFixed(1) + ' Mo'; if (b > 1e3) return (b / 1e3).toFixed(1) + ' Ko'; return b + ' o'; }
 
 export default function AdminPage() {
+  const tr = useT();
   const navigate = useNavigate();
-  const { token: authToken } = useAuthStore();
   const [themeName] = useState(() => localStorage.getItem('om_theme') || 'dark');
-  const t = themes[themeName] || themes.dark;
+  const t = resolveTheme(themeName);
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
@@ -27,49 +28,92 @@ export default function AdminPage() {
   const [resetPw, setResetPw] = useState(null); // userId
   const [newPw, setNewPw] = useState('');
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` };
+  // Session par cookie : plus d'en-tête Authorization, mais `credentials`
+  // devient obligatoire sur CHAQUE appel (cf. lib/api.js).
+  const headers = { 'Content-Type': 'application/json' };
+  const avecSession = (opts = {}) => ({ credentials: 'include', headers, ...opts });
 
   const fetchUsers = useCallback(async () => {
-    try { const r = await fetch(API, { headers }); setUsers(await r.json()); } catch {}
-  }, [authToken]);
+    try { const r = await fetch(API, avecSession()); setUsers(await r.json()); } catch {}
+  }, []);
 
   const fetchStats = useCallback(async () => {
-    try { const r = await fetch(`${API}/stats`, { headers }); setStats(await r.json()); } catch {}
-  }, [authToken]);
+    try { const r = await fetch(`${API}/stats`, avecSession()); setStats(await r.json()); } catch {}
+  }, []);
 
   const fetchAudit = useCallback(async (page = 1) => {
-    try { const r = await fetch(`${API}/audit?page=${page}&limit=30`, { headers }); const d = await r.json(); setAudit(d); } catch {}
-  }, [authToken]);
+    try { const r = await fetch(`${API}/audit?page=${page}&limit=30`, avecSession()); const d = await r.json(); setAudit(d); } catch {}
+  }, []);
 
   useEffect(() => { fetchUsers(); fetchStats(); fetchAudit(); }, []);
 
   const flash = (msg, isError) => { if (isError) { setError(msg); setTimeout(() => setError(''), 3000); } else { setSuccess(msg); setTimeout(() => setSuccess(''), 3000); } };
 
   const createUser = async () => {
-    if (!createForm.username || !createForm.password) { flash('Remplissez identifiant et mot de passe', true); return; }
-    const r = await fetch(API, { method: 'POST', headers, body: JSON.stringify(createForm) });
+    if (!createForm.username || !createForm.password) { flash(tr('admin.msg.champsRequis'), true); return; }
+    const r = await fetch(API, avecSession({ method: 'POST', body: JSON.stringify(createForm) }));
     const d = await r.json();
-    if (!r.ok) { flash(d.error, true); return; }
-    flash(`✓ ${d.username} créé`);
+    if (!r.ok) { flash(messageErreur(d), true); return; }
+    flash(tr('admin.msg.utilisateurCree', { nom: d.username }));
     setShowCreate(false); setCreateForm({ username: '', password: '', displayName: '', email: '', role: 'ANALYST' });
     fetchUsers(); fetchStats();
   };
 
+  // Les réponses d'erreur du serveur n'étaient pas lues : un refus (dernier
+  // administrateur, auto-rétrogradation) passait inaperçu et l'interface
+  // annonçait quand même « Rôle mis à jour ».
+  const appliquer = async (url, opts, succes, apres) => {
+    try {
+      const r = await fetch(url, opts);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { flash(messageErreur(d) || tr('admin.msg.refuse'), true); return null; }
+      flash(typeof succes === 'function' ? succes(d) : succes);
+      apres?.();
+      return d;
+    } catch (e) { flash(tr('admin.msg.erreurReseau', { message: e.message }), true); return null; }
+  };
+
   const changeRole = async (id, role) => {
-    await fetch(`${API}/${id}/role`, { method: 'PUT', headers, body: JSON.stringify({ role }) });
-    flash(`Rôle mis à jour`); fetchUsers();
+    const u = users.find(x => x.id === id);
+    // Aucune confirmation n'existait dans toute la page, alors que le reste de
+    // l'application en demande une pour des actions bien moins lourdes.
+    if (!confirm(tr('admin.confirm.role', { nom: u?.displayName || u?.username, role: tr('admin.role.' + role) }))) { fetchUsers(); return; }
+    await appliquer(`${API}/${id}/role`, avecSession({ method: 'PUT', body: JSON.stringify({ role }) }),
+      tr('admin.msg.roleMisAJour'));
+    fetchUsers(); // resynchronise le <select>, y compris après un refus
   };
 
   const toggleUser = async (id) => {
-    const r = await fetch(`${API}/${id}/toggle`, { method: 'PUT', headers });
-    const d = await r.json();
-    flash(d.active ? 'Utilisateur réactivé' : 'Utilisateur désactivé'); fetchUsers(); fetchStats();
+    const u = users.find(x => x.id === id);
+    if (!confirm(tr(u?.active ? 'admin.confirm.desactiver' : 'admin.confirm.reactiver', { nom: u?.displayName || u?.username }))) return;
+    await appliquer(`${API}/${id}/toggle`, avecSession({ method: 'PUT' }),
+      d => tr(d.active ? 'admin.msg.reactive' : 'admin.msg.desactive'),
+      () => { fetchUsers(); fetchStats(); });
+  };
+
+  /**
+   * Suppression définitive d'un compte.
+   *
+   * À distinguer de la désactivation, qui laisse la ligne en base et se
+   * réversible. Le serveur refuse le compte d'installation (409) et le dernier
+   * administrateur actif ; l'écran ne propose donc pas le bouton pour le
+   * premier, et affiche le refus pour le second.
+   */
+  const deleteUser = async (id, nom) => {
+    if (!confirm(tr('admin.confirm.supprimer', { nom }))) return;
+    await appliquer(`${API}/${id}`, avecSession({ method: 'DELETE' }), tr('admin.msg.compteSupprime'),
+      () => { fetchUsers(); fetchStats(); });
   };
 
   const resetPassword = async (id) => {
-    if (!newPw || newPw.length < 6) { flash('6 caractères minimum', true); return; }
-    await fetch(`${API}/${id}/password`, { method: 'PUT', headers, body: JSON.stringify({ password: newPw }) });
-    flash('Mot de passe réinitialisé'); setResetPw(null); setNewPw('');
+    // Doit rester aligné sur MIN_PASSWORD_LENGTH (server/routes/auth.js) :
+    // sinon l'écran accepte une saisie que le serveur refusera.
+    if (!newPw || newPw.length < 12) { flash(tr('dashboard.creer.motDePasseCourt', { n: 12 }), true); return; }
+    const u = users.find(x => x.id === id);
+    if (!confirm(tr('admin.confirm.reinitialiser', { nom: u?.displayName || u?.username }))) return;
+    const ok = await appliquer(`${API}/${id}/password`, avecSession({ method: 'PUT', body: JSON.stringify({ password: newPw }) }),
+      tr('admin.msg.mdpReinitialise'));
+    if (ok) { setResetPw(null); setNewPw(''); }
   };
 
   const inp = { padding: '8px 12px', fontSize: 13, background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, width: '100%', outline: 'none' };
@@ -82,8 +126,8 @@ export default function AdminPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>← Retour</button>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>🛡️ Administration</div>
-            <div style={{ fontSize: 11, color: t.textMuted }}>Gestion utilisateurs, statistiques, audit</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{tr('admin.titre')}</div>
+            <div style={{ fontSize: 11, color: t.textMuted }}>{tr('admin.sousTitre')}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -92,7 +136,7 @@ export default function AdminPage() {
               style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8, cursor: 'pointer',
                 background: tab === tb ? t.accent : t.surfaceAlt, color: tab === tb ? '#fff' : t.textSecondary,
                 border: `1px solid ${tab === tb ? t.accent : t.border}` }}>
-              {tb === 'users' ? '👥 Utilisateurs' : tb === 'stats' ? '📊 Stats' : '📋 Audit'}
+              {tr('admin.onglet.' + tb)}
             </button>
           ))}
         </div>
@@ -117,15 +161,15 @@ export default function AdminPage() {
             {/* Create form */}
             {showCreate && (
               <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Nouvel utilisateur</div>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{tr('admin.nouvelUtilisateur')}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <input placeholder="Identifiant *" value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })} style={inp} />
-                  <input placeholder="Mot de passe *" type="password" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} style={inp} />
-                  <input placeholder="Nom d'affichage" value={createForm.displayName} onChange={e => setCreateForm({ ...createForm, displayName: e.target.value })} style={inp} />
-                  <input placeholder="Email" value={createForm.email} onChange={e => setCreateForm({ ...createForm, email: e.target.value })} style={inp} />
+                  <input placeholder={tr('admin.champIdentifiant')} value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })} style={inp} />
+                  <input placeholder={tr('admin.champMotDePasse')} type="password" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} style={inp} />
+                  <input placeholder={tr('admin.champNomAffichage')} value={createForm.displayName} onChange={e => setCreateForm({ ...createForm, displayName: e.target.value })} style={inp} />
+                  <input placeholder={tr('admin.champEmail')} value={createForm.email} onChange={e => setCreateForm({ ...createForm, email: e.target.value })} style={inp} />
                 </div>
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 12, color: t.textSecondary }}>Rôle :</span>
+                  <span style={{ fontSize: 12, color: t.textSecondary }}>{tr('admin.role')}</span>
                   {ROLES.map(r => (
                     <button key={r} onClick={() => setCreateForm({ ...createForm, role: r })} style={{
                       padding: '5px 14px', fontSize: 12, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
@@ -135,8 +179,8 @@ export default function AdminPage() {
                     }}>{ROLE_LABELS[r]}</button>
                   ))}
                   <div style={{ flex: 1 }} />
-                  <button onClick={createUser} style={{ padding: '8px 24px', background: t.accent, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Créer</button>
-                  <button onClick={() => setShowCreate(false)} style={{ padding: '8px 16px', background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 8, color: t.textSecondary, cursor: 'pointer', fontSize: 13 }}>Annuler</button>
+                  <button onClick={createUser} style={{ padding: '8px 24px', background: t.accent, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>{tr('commun.creer')}</button>
+                  <button onClick={() => setShowCreate(false)} style={{ padding: '8px 16px', background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 8, color: t.textSecondary, cursor: 'pointer', fontSize: 13 }}>{tr('commun.annuler')}</button>
                 </div>
               </div>
             )}
@@ -154,29 +198,36 @@ export default function AdminPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 14, fontWeight: 700 }}>{u.displayName || u.username}</span>
                       <span style={{ fontSize: 11, color: t.textMuted }}>@{u.username}</span>
-                      {!u.active && <span style={{ fontSize: 10, background: '#ef444420', color: '#ef4444', padding: '1px 8px', borderRadius: 4, fontWeight: 600 }}>DÉSACTIVÉ</span>}
+                      {!u.active && <span style={{ fontSize: 10, background: '#ef444420', color: '#ef4444', padding: '1px 8px', borderRadius: 4, fontWeight: 600 }}>{tr('admin.desactive')}</span>}
                     </div>
                     <div style={{ fontSize: 11, color: t.textMuted }}>
                       Créé {fmtDate(u.createdAt)} · Dernière connexion {fmtDate(u.lastLogin)}
                     </div>
                   </div>
                   {/* Role selector */}
-                  <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
+                  {/* Compte d'installation : rôle verrouillé, ni désactivable
+                      ni supprimable. Le serveur refuse ces trois opérations
+                      (409) ; l'écran ne doit donc pas les proposer. */}
+                  <select value={u.role} disabled={u.protected} onChange={e => changeRole(u.id, e.target.value)}
                     style={{ padding: '5px 10px', fontSize: 12, background: t.surfaceAlt, color: ROLE_COLORS[u.role], border: `1px solid ${ROLE_COLORS[u.role]}40`, borderRadius: 6, fontWeight: 700 }}>
                     {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                   </select>
                   {/* Actions */}
                   <button onClick={() => { setResetPw(resetPw === u.id ? null : u.id); setNewPw(''); }}
-                    style={{ padding: '5px 10px', fontSize: 11, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 6, color: '#f59e0b', cursor: 'pointer', fontWeight: 600 }}>🔑</button>
-                  <button onClick={() => toggleUser(u.id)}
+                    style={{ padding: '5px 10px', fontSize: 11, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 6, color: '#f59e0b', cursor: 'pointer', fontWeight: 600 }}>{tr('admin.motDePasse')}</button>
+                  {!u.protected && <button onClick={() => deleteUser(u.id, u.displayName || u.username)}
+                    style={{ padding: '5px 10px', fontSize: 11, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 6, color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}
+                    title={tr('admin.supprimerTitre')}>{tr('commun.supprimer')}</button>}
+                  {u.protected && <span title={tr('admin.compteInstallationAide')} style={{ padding: '5px 10px', fontSize: 11, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 6, color: t.textMuted, fontWeight: 600, whiteSpace: 'nowrap' }}>{tr('admin.compteInstallation')}</span>}
+                  {!u.protected && <button onClick={() => toggleUser(u.id)}
                     style={{ padding: '5px 10px', fontSize: 11, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 6, color: u.active ? '#ef4444' : '#10b981', cursor: 'pointer', fontWeight: 600 }}>
-                    {u.active ? '🚫' : '✓'}
-                  </button>
+                    {u.active ? 'Désactiver' : 'Réactiver'}
+                  </button>}
 
                   {/* Reset password inline */}
                   {resetPw === u.id && (
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <input type="password" placeholder="Nouveau mdp" value={newPw} onChange={e => setNewPw(e.target.value)}
+                      <input type="password" placeholder={tr('admin.champNouveauMdp')} value={newPw} onChange={e => setNewPw(e.target.value)}
                         style={{ ...inp, width: 140, padding: '5px 8px', fontSize: 12 }} />
                       <button onClick={() => resetPassword(u.id)} style={{ padding: '5px 10px', fontSize: 11, background: '#f59e0b20', border: '1px solid #f59e0b60', borderRadius: 6, color: '#f59e0b', cursor: 'pointer', fontWeight: 700 }}>OK</button>
                     </div>
@@ -190,15 +241,14 @@ export default function AdminPage() {
         {/* ═══ STATS TAB ═══ */}
         {tab === 'stats' && stats && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 24 }}>
               {[
-                { label: 'Utilisateurs', value: stats.activeUsers, sub: `${stats.userCount} total`, icon: '👥', color: '#3b82f6' },
-                { label: 'Enquêtes', value: stats.caseCount, sub: fmtSize(stats.diskUsage), icon: '📁', color: '#10b981' },
-                { label: 'Actions (7j)', value: stats.recentActions, sub: `${stats.recentLogins} logins`, icon: '📊', color: '#a855f7' },
-                { label: 'Audit total', value: stats.auditCount, sub: 'entrées', icon: '📋', color: '#f59e0b' },
+                { label: tr('admin.stat.utilisateurs'), value: stats.activeUsers, sub: tr('admin.stat.total', { n: stats.userCount }), color: '#3b82f6' },
+                { label: tr('admin.stat.enquetes'), value: stats.caseCount, sub: fmtSize(stats.diskUsage), color: '#10b981' },
+                { label: tr('admin.stat.actions7j'), value: stats.recentActions, sub: tr('admin.stat.connexions', { n: stats.recentLogins }), color: '#a855f7' },
+                { label: tr('admin.stat.auditTotal'), value: stats.auditCount, sub: tr('admin.stat.entrees'), color: '#f59e0b' },
               ].map(s => (
                 <div key={s.label} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20, textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, marginBottom: 4 }}>{s.icon}</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{s.label}</div>
                   <div style={{ fontSize: 11, color: t.textMuted }}>{s.sub}</div>
@@ -207,7 +257,7 @@ export default function AdminPage() {
             </div>
 
             <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Répartition des rôles</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{tr('admin.repartitionRoles')}</div>
               {ROLES.map(r => {
                 const count = users.filter(u => u.role === r && u.active).length;
                 const pct = users.length ? (count / users.filter(u => u.active).length) * 100 : 0;
@@ -233,10 +283,10 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${t.border}`, background: t.surfaceAlt }}>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>Date</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>Action</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>Utilisateur</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>Détails</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>{tr('admin.table.date')}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>{tr('admin.table.action')}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>{tr('admin.table.utilisateur')}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>{tr('admin.table.details')}</th>
                     <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: t.textMuted }}>IP</th>
                   </tr>
                 </thead>
@@ -250,9 +300,9 @@ export default function AdminPage() {
                           color: log.action.startsWith('admin') ? '#ef4444' : log.action.startsWith('auth') ? '#3b82f6' : '#10b981',
                         }}>{log.action}</span>
                       </td>
-                      <td style={{ padding: '8px 14px', color: t.text }}>{log.user?.displayName || log.user?.username || '—'}</td>
-                      <td style={{ padding: '8px 14px', color: t.textMuted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.details || '—'}</td>
-                      <td style={{ padding: '8px 14px', color: t.textMuted, fontFamily: 'monospace', fontSize: 11 }}>{log.ip || '—'}</td>
+                      <td style={{ padding: '8px 14px', color: t.text }}>{log.user?.displayName || log.user?.username || '-'}</td>
+                      <td style={{ padding: '8px 14px', color: t.textMuted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.details || '-'}</td>
+                      <td style={{ padding: '8px 14px', color: t.textMuted, fontFamily: 'monospace', fontSize: 11 }}>{log.ip || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
