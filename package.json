@@ -1,8 +1,12 @@
 {
   "name": "osintmapper",
-  "version": "0.2.1",
+  "version": "0.1.0-alpha",
   "private": true,
-  "workspaces": ["server", "client"],
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && node --watch index.js",
@@ -12,8 +16,11 @@
     "db:studio": "cd server && npx prisma studio",
     "build": "cd client && npm run build",
     "start": "cd server && node index.js",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f app",
+    "test": "cd client && vitest run",
+    "test:watch": "cd client && vitest"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

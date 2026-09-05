@@ -1,37 +1,90 @@
-version: '3.8'
+# OSINTMapper - déploiement conteneurisé.
+#
+# Un seul service : l'API sert le client statique et les deux WebSockets, et la
+# base est SQLite. Le fichier est volontairement nommé `docker-compose.yml`
+# plutôt que `compose.yaml` : c'est le nom que TOUTES les versions de
+# `docker compose` et de `podman-compose` savent trouver.
+#
+#   cp .env.docker.example .env    # puis renseigner JWT_SECRET
+#   docker compose up -d --build   # ou : podman-compose up -d --build
+#   docker compose logs app        # le mot de passe admin ne s'affiche qu'une fois
+#
+# La version précédente décrivait un service PostgreSQL alors que
+# prisma/schema.prisma est en SQLite : rien ne démarrait.
+
+# Nom de projet fixe : sans lui, il est déduit du nom du dossier et les volumes
+# changent de nom si le dépôt est cloné ailleurs - une sauvegarde écrite pour
+# `osintmapper_db` ne trouverait plus rien.
+name: osintmapper
 
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${DB_USER:-osint}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-osint_secret_2024}
-      POSTGRES_DB: ${DB_NAME:-osintmapper}
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U ${DB_USER:-osint}
-      interval: 5s
-      retries: 5
-    restart: unless-stopped
-
   app:
     build: .
+    image: osintmapper:0.1
     ports:
-      - "${APP_PORT:-4444}:4444"
+      # Sur 127.0.0.1 par défaut : publier sur 0.0.0.0 exposerait l'instance en
+      # clair sur le réseau, or la session voyage dans un cookie `Secure` et
+      # n'est acceptée hors TLS que sur localhost. Pour un accès distant,
+      # placer un reverse-proxy TLS devant (voir DOCKER.md).
+      - "127.0.0.1:${APP_PORT:-4444}:4444"
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-osint}:${DB_PASSWORD:-osint_secret_2024}@db:5432/${DB_NAME:-osintmapper}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
       NODE_ENV: production
       PORT: 4444
-    depends_on:
-      db:
-        condition: service_healthy
+
+      # Dans un conteneur, 127.0.0.1 est la boucle locale DU CONTENEUR : le
+      # défaut du serveur (server/config.js, pensé pour un process derrière
+      # nginx) rendrait le port injoignable malgré sa publication. Ici c'est
+      # l'isolement réseau du conteneur qui joue ce rôle de pare-feu.
+      BIND_HOST: 0.0.0.0
+
+      # Chemin résolu par Prisma depuis le dossier du SCHÉMA : la base atterrit
+      # dans server/prisma/data/, qui est le volume `db` ci-dessous.
+      DATABASE_URL: file:./data/osintmapper.db
+      CLIENT_DIST: ../client/dist
+
+      # Racine des données. Le volume `data` est monté ici : la changer sans
+      # déplacer le montage rendrait les enquêtes invisibles.
+      DATA_DIR: /app/server/data
+
+      # Obligatoire : `:?` fait échouer `up` au lieu de démarrer sur un secret
+      # par défaut, qui serait public pour quiconque a lu ce dépôt.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis - 32 caractères minimum, voir .env.docker.example}
+
+      # Facultatifs.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+
+      # À passer à true UNIQUEMENT si l'instance est servie en http:// hors
+      # localhost : le cookie `Secure` n'y est pas enregistré par le navigateur,
+      # et la session ne s'installe jamais (échec muet). Voir DOCKER.md.
+      ALLOW_INSECURE_COOKIE: ${ALLOW_INSECURE_COOKIE:-}
+
+      # Défaut 1 (un reverse-proxy devant). Passer à 0 si le conteneur est
+      # joignable en direct : `X-Forwarded-For` devient sinon forgeable, et le
+      # limiteur de connexion se contourne avec une valeur différente à chaque
+      # essai.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      UPLOAD_QUOTA_PER_CASE: ${UPLOAD_QUOTA_PER_CASE:-524288000}
+
     volumes:
-      - ./plugins:/app/plugins
+      # Deux volumes parce que ce sont deux emplacements distincts, et c'est
+      # exactement le piège dans lequel le script de sauvegarde de DEPLOY.md
+      # est tombé : la base n'est PAS dans server/data/.
+      - db:/app/server/prisma/data      # base SQLite
+      - data:/app/server/data           # enquêtes, pièces jointes, instantanés, plugins
+
+    healthcheck:
+      # `/api/health` est réservé aux ADMIN (il révèle les enquêtes ouvertes) :
+      # il répondrait 401 sans session. La racine sert index.html.
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:4444/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  db:
+  data:

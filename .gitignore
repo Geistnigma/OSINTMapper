@@ -6,4 +6,35 @@ data/
 .env
 *.bak
 *.tmp
+
+# Marqueur posé par l'installateur : il porte le chemin des données de CETTE
+# machine. Versionné, il ferait croire à un dépôt fraîchement cloné qu'il est
+# déjà installé, et `start.sh` sauterait l'installation.
+server/.installed
 .DS_Store
+
+# Exports d'enquête déposés pour mise au point : ce sont des données d'enquête,
+# elles n'ont rien à faire dans l'historique du dépôt.
+*.osintracker
+
+# Outillage d'assistance : notes de travail internes, sans intérêt pour qui
+# clone le dépôt, et susceptibles de contenir des detours de raisonnement ou
+# des chemins locaux. Le dépôt public documente le produit, pas sa fabrication.
+.claude/
+CLAUDE.md
+
+# Journaux et fichiers de travail
+*.log
+npm-debug.log*
+.cache/
+coverage/
+
+# Environnements virtuels et fichiers d'editeur
+.vscode/
+.idea/
+*.swp
+
+# Sauvegardes d'instance
+*.tar.gz
+*.zip
+backup*/

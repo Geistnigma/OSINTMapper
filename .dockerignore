@@ -1,0 +1,55 @@
+# Le contexte de build ne doit contenir QUE des sources.
+#
+# Sans ce fichier, `docker build` envoie au démon les ~700 Mo de node_modules de
+# l'hôte, puis `COPY server/ ./server/` écrase dans l'image la base SQLite, les
+# enquêtes et les pièces jointes de la machine de développement - des données
+# d'enquête qui se retrouveraient dans un tag d'image potentiellement publié.
+
+node_modules
+**/node_modules
+
+# Le client est reconstruit dans l'image ; un dist/ de l'hôte le masquerait.
+client/dist
+dist
+
+# Données d'instance : base, enquêtes, pièces jointes, instantanés, plugins
+# déposés à l'exécution. Elles vivent dans des volumes, jamais dans l'image.
+server/data
+server/prisma/data
+*.db
+*.db-journal
+*.bak
+*.tmp
+
+# Secrets. `**/.env` en plus de `.env` : un motif sans barre oblique ne vaut
+# qu'à la racine du contexte, et `COPY server/ ./server/` embarquerait sinon le
+# server/.env de la machine de développement - secret JWT compris - dans une
+# image potentiellement publiée.
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.docker.example
+
+# Exports d'enquête déposés pour mise au point
+*.osintracker
+
+# Marqueur d'installation d'une machine : dans une image il ferait croire au
+# conteneur qu'il est déjà configuré. En conteneur, la configuration passe par
+# les variables d'environnement et l'entrypoint, jamais par l'installateur web.
+server/.installed
+
+.git
+.gitignore
+.github
+.claude
+**/*.test.js
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Seulement les documents de la RACINE : les `docs.md` des plugins sont importés
+# en `?raw` par leurs manifestes et par le glob de registry.js - les exclure
+# casse le build du client, pas seulement sa documentation.
+/*.md
