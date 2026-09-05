@@ -15,6 +15,10 @@ model User {
   passwordHash String
   role         String    @default("ANALYST")
   active       Boolean   @default(true)
+  /// Compte d'amorçage créé à l'installation : ni supprimable, ni désactivable,
+  /// ni rétrogradable. Sans lui, une instance pouvait se retrouver sans aucun
+  /// administrateur - plus personne pour créer de comptes ni gérer les accès.
+  protected    Boolean   @default(false)
   createdAt    DateTime  @default(now())
   lastLogin    DateTime?
 
@@ -29,11 +33,40 @@ model Case {
   tags        String   @default("[]")
   status      String   @default("ACTIVE")
   encrypted   Boolean  @default(false)
+  /// Réglages de l'enquête, en JSON : { invitedRole, plugins: [...] }.
+  /// Un champ unique et extensible plutôt qu'une colonne par option - sinon
+  /// chaque nouveau réglage exige une migration.
+  settings    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   access      CaseAccess[]
   history     CaseHistory[]
+  uploads     Upload[]
+  invites     Invite[]
+  snapshots   CaseSnapshot[]
+}
+
+/**
+ * Point de restauration : métadonnées d'une copie du fichier d'enquête,
+ * stockée dans server/data/snapshots/<caseId>/<id>.<ext>.
+ * `entities`/`links` sont nuls pour une enquête chiffrée - le serveur ne peut
+ * pas les compter sans la clé de session.
+ */
+model CaseSnapshot {
+  id        String   @id
+  caseId    String
+  ext       String   // 'json' | 'enc'
+  size      Int
+  auto      Boolean  @default(true)
+  label     String?
+  entities  Int?
+  links     Int?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  @@index([caseId, createdAt])
 }
 
 model CaseAccess {
@@ -74,13 +107,74 @@ model AuditLog {
   @@index([createdAt])
 }
 
+/// Pièce jointe rattachée à une enquête.
+/// Sans ce lien, /api/uploads ne pouvait vérifier aucun droit : les images
+/// étaient servies publiquement à qui connaissait l'URL.
+model Upload {
+  id         String   @id
+  caseId     String
+  uploaderId String?
+  ext        String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+/// Invitation à une enquête. Persistée (et non plus un simple JWT autoporteur)
+/// pour pouvoir être révoquée : un lien transféré par erreur devait pouvoir
+/// être annulé sans changer le secret global.
+model Invite {
+  id        String    @id @default(cuid())
+  caseId    String
+  role      String    @default("ANALYST")
+  createdBy String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  usedCount Int       @default(0)
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+/// Plugin installé à l'exécution (déposé par un ADMIN), par opposition aux
+/// plugins natifs compilés dans le bundle client.
 model Plugin {
-  id          String   @id
+  id          String   @id            // id du manifeste (kebab-case)
   name        String
   version     String
+  sdkVersion  String?
   description String?
   author      String?
-  enabled     Boolean  @default(true)
-  config      String?
+  category    String?
+  icon        String?
+  manifest    String                  // manifeste JSON sérialisé
+  docs        String?                 // markdown de documentation
+  bundleHash  String                  // SHA-256 du bundle, affiché à l'installation
+  size        Int      @default(0)
+  approved    Boolean  @default(false) // un ADMIN doit approuver avant mise à disposition
+  installedBy String?
   installedAt DateTime @default(now())
+
+  preferences PluginPreference[]
+}
+
+/// Activation d'un plugin par utilisateur.
+/// L'état vivait en localStorage : il ne suivait pas l'utilisateur d'un poste à
+/// l'autre et échappait à toute gouvernance.
+model PluginPreference {
+  pluginId String
+  userId   String
+  enabled  Boolean  @default(false)
+  settings String?  // JSON des réglages propres à l'utilisateur
+  updatedAt DateTime @updatedAt
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@id([pluginId, userId])
+  @@index([userId])
 }

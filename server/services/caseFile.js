@@ -7,14 +7,30 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { encrypt, decrypt } from './crypto.js';
+import { config } from '../config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CASES_DIR = path.join(__dirname, '..', 'data', 'cases');
+// Racine des données : configurable par DATA_DIR (voir config.js).
+const CASES_DIR = path.join(config.dataDir, 'cases');
 
 // Ensure directory exists
 if (!fs.existsSync(CASES_DIR)) fs.mkdirSync(CASES_DIR, { recursive: true });
 
 const FILE_VERSION = 1;
+
+/**
+ * Refuse tout identifiant qui pourrait sortir de CASES_DIR.
+ *
+ * Les appelants passent aujourd'hui par requireCaseAccess, qui garantit un cuid
+ * existant en base - mais rien ici ne le garantissait : une seule route oubliant
+ * ce middleware aurait suffi à lire ou écrire un fichier arbitraire.
+ */
+function safeCaseId(caseId) {
+  if (typeof caseId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(caseId)) {
+    throw new Error('Identifiant d\'enquête invalide');
+  }
+  return caseId;
+}
 
 /**
  * Build the standard JSON structure for a case.
@@ -38,13 +54,14 @@ export function buildCaseData(meta, entities, links, stickers, postits, timeline
  * @param {object} data - { meta, entities, links, stickers, postits }
  * @param {object} opts - { encrypted: bool, password: string }
  */
-export function saveCaseFile(caseId, data, opts = {}) {
+export async function saveCaseFile(caseId, data, opts = {}) {
+  safeCaseId(caseId);
   const caseData = buildCaseData(data.meta, data.entities, data.links, data.stickers, data.postits, data.timeline);
 
   let content;
   let ext;
   if (opts.encrypted && opts.password) {
-    content = JSON.stringify(encrypt(caseData, opts.password), null, 0);
+    content = JSON.stringify(await encrypt(caseData, opts.password), null, 0);
     ext = '.enc';
   } else {
     content = JSON.stringify(caseData, null, 2);
@@ -81,7 +98,8 @@ export function saveCaseFile(caseId, data, opts = {}) {
  * @param {string|null} password - required if encrypted
  * @returns {object} - { version, meta, entities, links, stickers, postits }
  */
-export function loadCaseFile(caseId, password = null) {
+export async function loadCaseFile(caseId, password = null) {
+  safeCaseId(caseId);
   const jsonPath = path.join(CASES_DIR, `${caseId}.json`);
   const encPath = path.join(CASES_DIR, `${caseId}.enc`);
 
@@ -90,14 +108,14 @@ export function loadCaseFile(caseId, password = null) {
 
   if (fs.existsSync(encPath)) { filePath = encPath; isEncrypted = true; }
   else if (fs.existsSync(jsonPath)) { filePath = jsonPath; isEncrypted = false; }
-  else return null; // No file — case has no data yet
+  else return null; // No file - case has no data yet
 
   const raw = fs.readFileSync(filePath, 'utf8');
   const parsed = JSON.parse(raw);
 
   if (isEncrypted) {
     if (!password) throw new Error('PASSWORD_REQUIRED');
-    return decrypt(parsed, password);
+    return await decrypt(parsed, password);
   }
 
   return parsed;
@@ -107,6 +125,7 @@ export function loadCaseFile(caseId, password = null) {
  * Check if a case file exists and if it's encrypted.
  */
 export function getCaseFileInfo(caseId) {
+  safeCaseId(caseId);
   const jsonPath = path.join(CASES_DIR, `${caseId}.json`);
   const encPath = path.join(CASES_DIR, `${caseId}.enc`);
 
@@ -122,13 +141,47 @@ export function getCaseFileInfo(caseId) {
 }
 
 /**
- * Delete a case file.
+ * Supprime TOUTES les traces d'une enquête sur le disque.
+ *
+ * Les variantes .bak (créées à chaque sauvegarde) et .tmp n'étaient pas
+ * effacées : après suppression d'une enquête, une copie complète et lisible
+ * de ses données restait indéfiniment dans data/cases/.
  */
 export function deleteCaseFile(caseId) {
-  const jsonPath = path.join(CASES_DIR, `${caseId}.json`);
-  const encPath = path.join(CASES_DIR, `${caseId}.enc`);
-  if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
-  if (fs.existsSync(encPath)) fs.unlinkSync(encPath);
+  safeCaseId(caseId);
+  const targets = [];
+  for (const ext of ['.json', '.enc']) {
+    const base = path.join(CASES_DIR, `${caseId}${ext}`);
+    targets.push(base, `${base}.bak`, `${base}.tmp`);
+  }
+  let removed = 0;
+  for (const p of targets) {
+    try { if (fs.existsSync(p)) { fs.unlinkSync(p); removed++; } } catch { /* best effort */ }
+  }
+  return removed;
+}
+
+/**
+ * Supprime les résidus .bak/.tmp qui ne correspondent à aucune enquête vivante.
+ * @param {Set<string>} liveCaseIds - identifiants encore présents en base
+ */
+export function purgeOrphanFiles(liveCaseIds) {
+  const removed = [];
+  let files = [];
+  try { files = fs.readdirSync(CASES_DIR); } catch { return removed; }
+  for (const f of files) {
+    const m = f.match(/^(.+?)\.(json|enc)(\.bak|\.tmp)?$/);
+    if (!m) continue;
+    const [, caseId, , suffix] = m;
+    // Un .bak/.tmp d'une enquête supprimée n'a plus aucune raison d'exister.
+    if (!liveCaseIds.has(caseId)) {
+      try { fs.unlinkSync(path.join(CASES_DIR, f)); removed.push(f); } catch {}
+    } else if (suffix === '.tmp') {
+      // Résidu d'une écriture interrompue
+      try { fs.unlinkSync(path.join(CASES_DIR, f)); removed.push(f); } catch {}
+    }
+  }
+  return removed;
 }
 
 /**
@@ -148,7 +201,8 @@ export function getCaseFileBuffer(caseId) {
  * Import a case file from a buffer.
  * Returns the parsed data (decrypted if needed).
  */
-export function importCaseFile(caseId, buffer, password = null) {
+export async function importCaseFile(caseId, buffer, password = null) {
+  safeCaseId(caseId);
   const raw = buffer.toString('utf8');
   const parsed = JSON.parse(raw);
 
@@ -157,14 +211,14 @@ export function importCaseFile(caseId, buffer, password = null) {
 
   if (isEncrypted) {
     if (!password) throw new Error('PASSWORD_REQUIRED');
-    const data = decrypt(parsed, password);
+    const data = await decrypt(parsed, password);
     // Re-save with the provided password
-    saveCaseFile(caseId, data, { encrypted: true, password });
+    await saveCaseFile(caseId, data, { encrypted: true, password });
     return { data, encrypted: true };
   } else {
-    // Plain JSON — might have version/meta/entities or be the raw data
+    // Plain JSON - might have version/meta/entities or be the raw data
     const data = parsed.version ? parsed : buildCaseData(parsed.meta, parsed.entities, parsed.links, parsed.stickers, parsed.postits);
-    saveCaseFile(caseId, data, { encrypted: false });
+    await saveCaseFile(caseId, data, { encrypted: false });
     return { data, encrypted: false };
   }
 }

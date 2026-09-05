@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation d'OSINTMapper</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface-2:#1c2333;--border:#2a3140;--border-hi:#3d4868;
+--text:#e2e4ed;--text-2:#8b8fa8;--text-3:#626a80;--accent:#58a6ff;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:var(--text-2);margin-top:8px;font-size:14.5px}
+fieldset{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:22px 24px;margin-top:22px}
+legend{padding:0 10px;font:700 11.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+label{display:block;font-size:13px;font-weight:650;margin:14px 0 6px}
+label span{font-weight:400;color:var(--text-3)}
+input,select{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border-hi);
+background:#0a0e14;color:var(--text);font:14px var(--sans)}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+input.mono{font-family:var(--mono);font-size:13px}
+.aide{font-size:12.5px;color:var(--text-3);margin-top:6px}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.sugg button{padding:5px 10px;border-radius:100px;border:1px solid var(--border-hi);background:var(--surface-2);
+color:var(--text-2);font:500 12px var(--mono);cursor:pointer}
+.sugg button:hover{border-color:var(--accent);color:var(--text)}
+.etat{margin-top:10px;padding:9px 12px;border-radius:9px;font-size:13px;display:none}
+.etat.ok{display:block;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.35);color:#7ee2c0}
+.etat.ko{display:block;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#ffa8a8}
+.etat.warn{display:block;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);color:#fbd38d}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.user{display:grid;grid-template-columns:1fr 1fr 130px 34px;gap:8px;align-items:end;margin-top:12px}
+.user button{height:38px;border-radius:9px;border:1px solid var(--border-hi);background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:16px}
+.lien{background:none;border:0;color:var(--accent);font:600 13px var(--sans);cursor:pointer;padding:0;margin-top:14px}
+.actions{margin-top:26px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{padding:13px 24px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:#06101f;
+font:650 14.5px var(--sans);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec{background:var(--surface-2);border-color:var(--border-hi);color:var(--text)}
+pre{background:#0a0e14;border:1px solid var(--border);border-radius:9px;padding:14px;overflow-x:auto;
+font:12.5px/1.7 var(--mono);color:var(--text-2);margin-top:14px;white-space:pre-wrap}
+.fini{text-align:center;padding:40px 0}
+.fini .rond{width:56px;height:56px;border-radius:30px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);
+display:inline-grid;place-content:center;font-size:26px;margin-bottom:18px}
+dl{margin-top:20px;display:grid;grid-template-columns:auto 1fr;gap:8px 18px;text-align:left;font-size:13.5px}
+dt{color:var(--text-3)}dd{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.entete{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.lang{display:flex;gap:2px}
+.drapeau{padding:4px 7px;font-size:17px;line-height:1;cursor:pointer;border-radius:7px;border:1px solid transparent;
+background:none;opacity:.45;transition:opacity .15s,border-color .15s;
+font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif}
+.drapeau:hover{opacity:1}
+.drapeau.actif{opacity:1;border-color:var(--accent);background:rgba(88,166,255,.10)}
+.avert{margin-top:22px;padding:12px 14px;border-radius:9px;background:rgba(245,158,11,.08);
+border:1px solid rgba(245,158,11,.3);color:#fbd38d;font-size:13px;text-align:left}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="formulaire">
+  <div class="entete">
+    <h1><span data-i18n="titre">Installation d'</span><em>OSINTMapper</em></h1>
+    <!-- Drapeaux en émojis, comme la vitrine : Windows n'a pas de glyphe pour
+         les indicateurs régionaux et affichera « FR », « GB », « DE ». -->
+    <div class="lang" role="group" aria-label="Langue - Language - Sprache">
+      <button type="button" class="drapeau actif" data-lang="fr" title="Français" aria-pressed="true">🇫🇷</button>
+      <button type="button" class="drapeau" data-lang="en" title="English" aria-pressed="false">🇬🇧</button>
+      <button type="button" class="drapeau" data-lang="de" title="Deutsch" aria-pressed="false">🇩🇪</button>
+    </div>
+  </div>
+  <p class="lede" data-i18n="lede">Trois réglages, puis l'instance est prête. Cette page n'écoute que sur cette machine.</p>
+
+  <fieldset>
+    <legend><span data-i18n="etape1">1 · Où ranger les enquêtes</span></legend>
+    <label for="chemin"><span data-i18n="champDossier">Dossier de données</span> <span data-i18n="champDossierAide">— enquêtes, pièces jointes, instantanés et base</span></label>
+    <input id="chemin" class="mono" placeholder="/home/vous/OSINTMapper/donnees" data-i18n-ph="phDossier" autocomplete="off">
+    <div class="sugg" id="suggestions"></div>
+    <div class="etat" id="etatChemin"></div>
+    <p class="aide" data-i18n="aideDossier">Tout tient dans ce seul dossier : c'est lui, et lui seul, qu'il faudra sauvegarder. Un volume chiffré est un bon choix.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend><span data-i18n="etape2">2 · Accès</span></legend>
+    <div class="duo">
+      <div>
+        <label for="port" data-i18n="port">Port</label>
+        <input id="port" class="mono" type="number" min="1" max="65535" value="4444">
+      </div>
+      <div>
+        <label for="origine"><span data-i18n="origine">Adresse publique</span> <span data-i18n="facultatif">— facultatif</span></label>
+        <input id="origine" class="mono" placeholder="https://enquetes.exemple.fr" data-i18n-ph="phOrigine">
+      </div>
+    </div>
+    <p class="aide" data-i18n="aideOrigine">L'adresse publique ne sert que derrière un reverse-proxy TLS. Laissez vide pour un usage local.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend><span data-i18n="etape3">3 · Comptes</span></legend>
+    <label for="admin"><span data-i18n="administrateur">Administrateur</span> <span data-i18n="administrateurAide">— compte d'installation, non supprimable</span></label>
+    <input id="admin" placeholder="admin" autocomplete="off">
+    <div class="duo" style="margin-top:12px">
+      <div>
+        <label for="mdp"><span data-i18n="motDePasse">Mot de passe</span> <span id="minmdp"></span></label>
+        <input id="mdp" type="password" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="mdp2" data-i18n="confirmation">Confirmation</label>
+        <input id="mdp2" type="password" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="etat" id="etatAdmin"></div>
+
+    <div id="autres"></div>
+    <button class="lien" id="ajouter" type="button" data-i18n="ajouterCompte">+ Ajouter un autre compte</button>
+    <p class="aide" data-i18n="aideComptes">Les comptes supplémentaires peuvent aussi être créés plus tard depuis l'écran d'administration.</p>
+  </fieldset>
+
+  <div class="actions">
+    <button class="btn" id="installer" data-i18n="installer">Installer</button>
+    <span id="progression" class="aide"></span>
+  </div>
+  <div class="etat" id="etatGlobal"></div>
+  <pre id="detail" style="display:none"></pre>
+</div>
+
+<div id="fini" class="fini" style="display:none">
+  <div class="rond">✓</div>
+  <h1 data-i18n="termine">Installation terminée</h1>
+  <p class="lede" id="resume"></p>
+  <dl id="recap"></dl>
+  <div class="avert">
+    <span data-i18n="avertSecret">Le secret de session est dans <code>server/.env</code>, en droits 0600. Ne le versionnez pas. Sauvegardez le dossier de données : il contient les enquêtes et la base.</span>
+  </div>
+  <div class="actions" style="justify-content:center">
+    <button class="btn" id="ouvrir" data-i18n="ouvrir">Ouvrir OSINTMapper</button>
+  </div>
+  <p class="aide" id="apres"></p>
+</div>
+
+</div>
+<script>
+/* ── Traduction ──────────────────────────────────────────────────────────────
+   Dictionnaire groupé PAR CLÉ : les trois variantes d'une phrase se lisent
+   côte à côte, donc un oubli se voit. Même principe que la page vitrine.
+   Les messages du serveur arrivent avec un CODE : c'est lui qui est traduit,
+   son texte français ne servant que de repli. */
+const T = {
+  titre:        { fr: "Installation d'", en: 'Installing ', de: 'Installation von ' },
+  lede:         { fr: "Trois réglages, puis l'instance est prête. Cette page n'écoute que sur cette machine.",
+                  en: 'Three settings, then the instance is ready. This page only listens on this machine.',
+                  de: 'Drei Einstellungen, dann ist die Instanz bereit. Diese Seite lauscht nur auf diesem Rechner.' },
+  etape1:       { fr: '1 · Où ranger les enquêtes', en: '1 · Where to store investigations', de: '1 · Wo die Ermittlungen liegen' },
+  champDossier: { fr: 'Dossier de données', en: 'Data folder', de: 'Datenordner' },
+  champDossierAide: { fr: '— enquêtes, pièces jointes, instantanés et base',
+                  en: '— investigations, attachments, snapshots and database',
+                  de: '— Ermittlungen, Anhänge, Momentaufnahmen und Datenbank' },
+  phDossier:    { fr: '/home/vous/OSINTMapper/donnees', en: '/home/you/OSINTMapper/data', de: '/home/sie/OSINTMapper/daten' },
+  aideDossier:  { fr: "Tout tient dans ce seul dossier : c'est lui, et lui seul, qu'il faudra sauvegarder. Un volume chiffré est un bon choix.",
+                  en: 'Everything lives in this single folder: it is the one, and the only one, to back up. An encrypted volume is a good choice.',
+                  de: 'Alles liegt in diesem einen Ordner: Er allein muss gesichert werden. Ein verschlüsseltes Laufwerk ist eine gute Wahl.' },
+  etape2:       { fr: '2 · Accès', en: '2 · Access', de: '2 · Zugang' },
+  port:         { fr: 'Port', en: 'Port', de: 'Port' },
+  origine:      { fr: 'Adresse publique', en: 'Public address', de: 'Öffentliche Adresse' },
+  facultatif:   { fr: '— facultatif', en: '— optional', de: '— optional' },
+  phOrigine:    { fr: 'https://enquetes.exemple.fr', en: 'https://cases.example.com', de: 'https://ermittlungen.beispiel.de' },
+  aideOrigine:  { fr: "L'adresse publique ne sert que derrière un reverse-proxy TLS. Laissez vide pour un usage local.",
+                  en: 'The public address is only useful behind a TLS reverse proxy. Leave it empty for local use.',
+                  de: 'Die öffentliche Adresse dient nur hinter einem TLS-Reverse-Proxy. Für lokale Nutzung leer lassen.' },
+  etape3:       { fr: '3 · Comptes', en: '3 · Accounts', de: '3 · Konten' },
+  administrateur: { fr: 'Administrateur', en: 'Administrator', de: 'Administration' },
+  administrateurAide: { fr: "— compte d'installation, non supprimable",
+                  en: '— bootstrap account, cannot be deleted', de: '— Installationskonto, nicht löschbar' },
+  motDePasse:   { fr: 'Mot de passe', en: 'Password', de: 'Passwort' },
+  confirmation: { fr: 'Confirmation', en: 'Confirmation', de: 'Bestätigung' },
+  ajouterCompte:{ fr: '+ Ajouter un autre compte', en: '+ Add another account', de: '+ Weiteres Konto hinzufügen' },
+  aideComptes:  { fr: "Les comptes supplémentaires peuvent aussi être créés plus tard depuis l'écran d'administration.",
+                  en: 'Extra accounts can also be created later from the administration screen.',
+                  de: 'Weitere Konten lassen sich auch später im Verwaltungsbereich anlegen.' },
+  installer:    { fr: 'Installer', en: 'Install', de: 'Installieren' },
+  termine:      { fr: 'Installation terminée', en: 'Installation complete', de: 'Installation abgeschlossen' },
+  ouvrir:       { fr: 'Ouvrir OSINTMapper', en: 'Open OSINTMapper', de: 'OSINTMapper öffnen' },
+  avertSecret:  { fr: "Le secret de session est dans server/.env, en droits 0600. Ne le versionnez pas. Sauvegardez le dossier de données : il contient les enquêtes et la base.",
+                  en: 'The session secret lives in server/.env, with 0600 permissions. Do not commit it. Back up the data folder: it holds the investigations and the database.',
+                  de: 'Das Sitzungsgeheimnis liegt in server/.env mit den Rechten 0600. Nicht versionieren. Sichern Sie den Datenordner: Er enthält die Ermittlungen und die Datenbank.' },
+  role:         { fr: 'Rôle', en: 'Role', de: 'Rolle' },
+  identifiant:  { fr: 'Identifiant', en: 'Username', de: 'Benutzername' },
+  retirer:      { fr: 'Retirer', en: 'Remove', de: 'Entfernen' },
+  minMdp:       { fr: '— {n} caractères minimum', en: '— {n} characters minimum', de: '— mindestens {n} Zeichen' },
+  progression:  { fr: 'Création des dossiers, migrations, comptes…', en: 'Creating folders, running migrations, adding accounts…',
+                  de: 'Ordner werden angelegt, Migrationen und Konten…' },
+  mdpDifferents:{ fr: 'Les deux mots de passe diffèrent.', en: 'The two passwords differ.', de: 'Die beiden Passwörter stimmen nicht überein.' },
+  mdpCourt:     { fr: 'Mot de passe : {n} caractères minimum.', en: 'Password: {n} characters minimum.', de: 'Passwort: mindestens {n} Zeichen.' },
+  corrigerChemin:{ fr: "Corrigez d'abord le dossier de données.", en: 'Fix the data folder first.', de: 'Korrigieren Sie zuerst den Datenordner.' },
+  echec:        { fr: 'Échec.', en: 'Failed.', de: 'Fehlgeschlagen.' },
+  resume:       { fr: "{n} compte(s) créé(s). L'instance est prête à démarrer.",
+                  en: '{n} account(s) created. The instance is ready to start.',
+                  de: '{n} Konto/Konten angelegt. Die Instanz ist startbereit.' },
+  apres:        { fr: "Le serveur d'installation s'est arrêté. Les prochains lancements de ./start.sh iront directement à la page de connexion.",
+                  en: 'The setup server has stopped. Further runs of ./start.sh will go straight to the sign-in page.',
+                  de: 'Der Installationsserver wurde beendet. Weitere Starts von ./start.sh führen direkt zur Anmeldeseite.' },
+  recapDonnees: { fr: 'Données', en: 'Data', de: 'Daten' },
+  recapBase:    { fr: 'Base', en: 'Database', de: 'Datenbank' },
+  recapPort:    { fr: 'Port', en: 'Port', de: 'Port' },
+
+  /* Messages du serveur, par code. */
+  'err.chemin_vide':     { fr: 'Indiquez un dossier.', en: 'Enter a folder.', de: 'Geben Sie einen Ordner an.' },
+  'err.chemin_relatif':  { fr: 'Le chemin doit être absolu.', en: 'The path must be absolute.', de: 'Der Pfad muss absolut sein.' },
+  'err.racine_systeme':  { fr: 'Emplacement système refusé. Choisissez par exemple {exemple}.',
+                           en: 'System location refused. Try {exemple} instead.',
+                           de: 'Systemverzeichnis abgelehnt. Wählen Sie z. B. {exemple}.' },
+  'err.parent_absent':   { fr: 'Aucun dossier existant sur le chemin {chemin}.', en: 'No existing folder along the path {chemin}.',
+                           de: 'Kein vorhandener Ordner auf dem Pfad {chemin}.' },
+  'err.pas_un_dossier':  { fr: 'Ce chemin est un fichier, pas un dossier.', en: 'This path is a file, not a folder.',
+                           de: 'Dieser Pfad ist eine Datei, kein Ordner.' },
+  'err.non_ecrivable':   { fr: 'Écriture impossible dans {cible}. Vérifiez les droits.',
+                           en: 'Cannot write into {cible}. Check the permissions.',
+                           de: 'Schreiben in {cible} nicht möglich. Rechte prüfen.' },
+  'err.non_vide':        { fr: "Le dossier contient déjà {n} élément(s) étranger(s) à OSINTMapper. Choisissez un dossier vide ou dédié.",
+                           en: 'The folder already holds {n} item(s) unrelated to OSINTMapper. Pick an empty or dedicated folder.',
+                           de: 'Der Ordner enthält bereits {n} Element(e), die nicht zu OSINTMapper gehören. Wählen Sie einen leeren oder eigenen Ordner.' },
+  'err.ok_existant':     { fr: 'Dossier existant, utilisable.', en: 'Existing folder, usable.', de: 'Vorhandener Ordner, nutzbar.' },
+  'err.ok_cree':         { fr: 'Le dossier sera créé.', en: 'The folder will be created.', de: 'Der Ordner wird angelegt.' },
+  'err.ok_cree_chaine':  { fr: 'Le dossier sera créé (avec {chaine}).', en: 'The folder will be created (along with {chaine}).',
+                           de: 'Der Ordner wird angelegt (samt {chaine}).' },
+  'err.avert_tmp':       { fr: 'Un dossier sous /tmp est effacé au redémarrage de la machine.',
+                           en: 'A folder under /tmp is wiped when the machine restarts.',
+                           de: 'Ein Ordner unter /tmp wird beim Neustart des Rechners gelöscht.' },
+  'err.deja_installe':   { fr: 'Cette instance est déjà installée.', en: 'This instance is already installed.',
+                           de: 'Diese Instanz ist bereits installiert.' },
+  'err.port_invalide':   { fr: 'Port invalide.', en: 'Invalid port.', de: 'Ungültiger Port.' },
+  'err.migrations':      { fr: 'Échec des migrations.', en: 'Migrations failed.', de: 'Migrationen fehlgeschlagen.' },
+  'err.identifiant_invalide': { fr: 'Identifiant invalide : « {nom} » (3 à 32 caractères, lettres, chiffres, . _ -).',
+                           en: 'Invalid username: “{nom}” (3 to 32 characters, letters, digits, . _ -).',
+                           de: 'Ungültiger Benutzername: „{nom}" (3 bis 32 Zeichen, Buchstaben, Ziffern, . _ -).' },
+  'err.identifiant_double': { fr: 'Identifiant en double : « {nom} ».', en: 'Duplicate username: “{nom}”.',
+                           de: 'Doppelter Benutzername: „{nom}".' },
+  'err.mot_de_passe_court': { fr: 'Mot de passe de « {nom} » : {n} caractères minimum.',
+                           en: 'Password for “{nom}”: {n} characters minimum.',
+                           de: 'Passwort für „{nom}": mindestens {n} Zeichen.' },
+  'err.role_inconnu':    { fr: 'Rôle inconnu : « {role} ».', en: 'Unknown role: “{role}”.', de: 'Unbekannte Rolle: „{role}".' },
+};
+
+const LANGUES = ['fr', 'en', 'de'];
+const CLE_LANGUE = 'om_setup_lang';
+let langue = (() => {
+  try { const m = localStorage.getItem(CLE_LANGUE); if (LANGUES.includes(m)) return m; } catch {}
+  const nav = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+  return LANGUES.includes(nav) ? nav : 'fr';
+})();
+
+/** Traduit une clé. `repli` est rendu si la clé n'existe pas - un message du
+ *  serveur reste ainsi lisible même sans traduction. */
+function t(cle, params, repli) {
+  const e = T[cle];
+  if (!e) return repli !== undefined ? repli : cle;
+  return String(e[langue] || e.fr).replace(/\{(\w+)\}/g, (m, n) =>
+    params && params[n] !== undefined ? params[n] : m);
+}
+
+/** Message d'une réponse serveur : le code fait foi, son texte est le repli. */
+function messageServeur(r) {
+  if (!r) return t('echec');
+  if (r.code === 'ok') {
+    if (r.params?.existe) return t('err.ok_existant');
+    return r.params?.chaine ? t('err.ok_cree_chaine', r.params) : t('err.ok_cree');
+  }
+  return t(`err.${r.code}`, r.params, r.erreur || r.message || t('echec'));
+}
+
+function appliquerLangue() {
+  document.documentElement.lang = langue;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
+  document.title = t('titre') + 'OSINTMapper';
+  for (const b of document.querySelectorAll('.drapeau')) {
+    const actif = b.dataset.lang === langue;
+    b.classList.toggle('actif', actif);
+    b.setAttribute('aria-pressed', String(actif));
+  }
+  if (minMdp) $('minmdp').textContent = t('minMdp', { n: minMdp });
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.drapeau');
+  if (!b) return;
+  langue = b.dataset.lang;
+  try { localStorage.setItem(CLE_LANGUE, langue); } catch {}
+  appliquerLangue();
+  if ($('chemin').value.trim()) verifierChemin();   // le message d'état suit aussi
+});
+
+// Appliquée dès le chargement : la placer dans la réponse de /api/defauts
+// laissait la page en français tant que l'appel n'avait pas abouti - et
+// définitivement s'il échouait.
+document.addEventListener('DOMContentLoaded', appliquerLangue);
+
+const jeton = new URLSearchParams(location.search).get('t') || '';
+const $ = id => document.getElementById(id);
+const poste = (url, corps) => fetch(url, {
+  method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Token': jeton },
+  body: JSON.stringify(corps),
+}).then(r => r.json());
+
+let minMdp = 12, roles = ['ADMIN', 'ANALYST', 'VIEWER'], portFinal = 4444;
+
+fetch('/api/defauts', { headers: { 'X-Setup-Token': jeton } }).then(r => r.json()).then(d => {
+  minMdp = d.minMotDePasse; roles = d.roles;
+  appliquerLangue();
+  $('port').value = d.port;
+  $('admin').value = 'admin';
+  d.suggestions.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = s;
+    b.onclick = () => { $('chemin').value = s; verifierChemin(); };
+    $('suggestions').appendChild(b);
+    if (i === 0 && !$('chemin').value) { $('chemin').value = s; verifierChemin(); }
+  });
+});
+
+function etat(el, classe, texte) { el.className = 'etat ' + classe; el.textContent = texte; }
+
+let cheminValide = false, minuteur;
+async function verifierChemin() {
+  const chemin = $('chemin').value;
+  if (!chemin.trim()) { cheminValide = false; $('etatChemin').className = 'etat'; return; }
+  const r = await poste('/api/verifier-chemin', { chemin });
+  cheminValide = r.code === 'ok';
+  const texte = r.codeAvertissement ? t(`err.avert_${r.codeAvertissement}`) : messageServeur(r);
+  etat($('etatChemin'), cheminValide ? (r.avertissement ? 'warn' : 'ok') : 'ko',
+       (cheminValide ? r.chemin + ' — ' : '') + texte);
+}
+$('chemin').addEventListener('input', () => { clearTimeout(minuteur); minuteur = setTimeout(verifierChemin, 300); });
+
+$('ajouter').onclick = () => {
+  const d = document.createElement('div');
+  d.className = 'user';
+  d.innerHTML = `<div><label>${t('identifiant')}</label><input class="u-nom" autocomplete="off"></div>
+    <div><label>${t('motDePasse')}</label><input class="u-mdp" type="password" autocomplete="new-password"></div>
+    <div><label>${t('role')}</label><select class="u-role">${roles.map(r => `<option>${r}</option>`).join('')}</select></div>
+    <button type="button" title="${t('retirer')}">×</button>`;
+  d.querySelector('button').onclick = () => d.remove();
+  d.querySelector('.u-role').value = 'ANALYST';
+  $('autres').appendChild(d);
+};
+
+$('installer').onclick = async () => {
+  const admin = { username: $('admin').value.trim(), password: $('mdp').value };
+  if (admin.password !== $('mdp2').value) return etat($('etatAdmin'), 'ko', t('mdpDifferents'));
+  if (admin.password.length < minMdp) return etat($('etatAdmin'), 'ko', t('mdpCourt', { n: minMdp }));
+  $('etatAdmin').className = 'etat';
+  if (!cheminValide) return etat($('etatGlobal'), 'ko', t('corrigerChemin'));
+
+  const utilisateurs = [...document.querySelectorAll('.user')].map(d => ({
+    username: d.querySelector('.u-nom').value.trim(),
+    password: d.querySelector('.u-mdp').value,
+    role: d.querySelector('.u-role').value,
+  })).filter(u => u.username || u.password);
+
+  $('installer').disabled = true;
+  $('progression').textContent = t('progression');
+  $('etatGlobal').className = 'etat'; $('detail').style.display = 'none';
+
+  const r = await poste('/api/installer', {
+    chemin: $('chemin').value, port: $('port').value, origine: $('origine').value, admin, utilisateurs,
+  }).catch(e => ({ erreur: e.message }));
+
+  $('progression').textContent = '';
+  if (!r.ok) {
+    $('installer').disabled = false;
+    etat($('etatGlobal'), 'ko', messageServeur(r));
+    if (r.detail) { $('detail').style.display = 'block'; $('detail').textContent = r.detail; }
+    return;
+  }
+  portFinal = r.port;
+  $('formulaire').style.display = 'none';
+  $('fini').style.display = 'block';
+  $('resume').textContent = t('resume', { n: r.comptes });
+  $('recap').innerHTML = `<dt>${t('recapDonnees')}</dt><dd>${r.dossierDonnees}</dd>
+    <dt>${t('recapBase')}</dt><dd>${r.base}</dd><dt>${t('recapPort')}</dt><dd>${r.port}</dd>`;
+  $('apres').textContent = t('apres');
+};
+
+$('ouvrir').onclick = () => { location.href = `http://127.0.0.1:${portFinal}/`; };
+</script>
+</body>
+</html>
