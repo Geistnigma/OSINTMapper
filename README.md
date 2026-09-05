@@ -133,7 +133,7 @@ npm run dev                      # API (4444, --watch) + client Vite (5173)
 
 1. **Changez le mot de passe `admin` / `osintmapper` immédiatement.** C'est un identifiant d'amorçage documenté publiquement. Le seed ne réécrit jamais un compte existant : une fois changé, il ne revient pas à sa valeur d'usine au redémarrage suivant.
 2. Les inscriptions publiques sont désactivées : seul un administrateur crée les comptes.
-3. Pour une mise en production, lisez **[DOCKER.md](DOCKER.md)** (conteneur) ou **[DEPLOY.md](DEPLOY.md)** (PM2 + nginx sur un hôte).
+3. Pour une mise en production, lisez **[DEPLOY.md](DEPLOY.md)** (service systemd, reverse-proxy TLS, sauvegardes) ou **[DOCKER.md](DOCKER.md)** (conteneur).
 
 ---
 
@@ -142,7 +142,7 @@ npm run dev                      # API (4444, --watch) + client Vite (5173)
 | Guide | Pour |
 |---|---|
 | **[DOCKER.md](DOCKER.md)** | Docker / Podman : volumes, sauvegarde, reverse-proxy TLS, mise à jour |
-| **[DEPLOY.md](DEPLOY.md)** | Installation sur un hôte : PM2, nginx, HTTPS, sauvegardes, VPN WireGuard |
+| **[DEPLOY.md](DEPLOY.md)** | `./start.sh` sur un hôte : service systemd, reverse-proxy TLS, sauvegardes, mise à jour |
 
 **Toujours sauvegarder les deux emplacements** : la base SQLite vit dans `server/prisma/data/` (Prisma résout une URL relative depuis le dossier du schéma), les enquêtes et pièces jointes dans `server/data/`. Une sauvegarde qui n'emporte que le second ne sauvegarde pas la base.
 

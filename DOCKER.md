@@ -68,8 +68,8 @@ Deux volumes nommés, parce que ce sont **deux emplacements distincts** :
 
 Prisma résout une URL relative **depuis le dossier du schéma**, pas depuis
 `server/` : la base n'est donc pas dans `server/data/`. Une sauvegarde qui
-n'emporte que le second volume ne sauvegarde pas la base - c'est exactement
-l'erreur que contenait le script de sauvegarde de DEPLOY.md.
+n'emporte que le second volume ne sauvegarde pas la base - c'est l'erreur
+classique, et elle est silencieuse jusqu'au jour de la restauration.
 
 ```bash
 # Sauvegarde des deux volumes
@@ -181,5 +181,5 @@ de tourner sur une installation dont le `server/.env` est en production. Il a
 remplacé `dev-setup.sh`, dont le nom d'origine - `deploy.sh` - invitait à le
 lancer là où il ne fallait surtout pas.
 
-Autres chemins de déploiement : **DEPLOY.md** pour une installation classique
-sur un hôte (PM2 + nginx).
+Autre chemin de déploiement : **DEPLOY.md**, pour une installation par
+`./start.sh` sur un hôte (service systemd, reverse-proxy TLS, sauvegardes).
