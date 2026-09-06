@@ -38,3 +38,8 @@ coverage/
 *.tar.gz
 *.zip
 backup*/
+
+# Vitrine : page de présentation servie séparément, hors du dépôt public.
+# Les deux captures affichées par le README en sont des copies, rangées dans
+# docs/images/ pour que le README reste autonome.
+front/
