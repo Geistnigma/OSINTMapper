@@ -13,6 +13,20 @@
 
 OSINTMapper permet aux analystes OSINT de **visualiser et relier** des entités (personnes, pseudos, emails, IPs, comptes, véhicules...) sur un graphe interactif.
 
+<p align="center">
+  <img src="docs/images/graphe.png" width="900"
+       alt="Graphe d'une enquête : une dizaine d'entités (personne, pseudo, comptes Twitch, YouTube et Discord, numéros de téléphone, véhicule, domicile) reliées par des flèches vertes, orange et rouges selon le niveau de confiance du lien. À gauche, la liste des catégories d'entités ; en bas, la palette de stickers et la fenêtre de chat.">
+  <br>
+  <em>Une enquête en cours : entités, liens typés et niveau de confiance (couleur et pointillé).</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/collaboration.png" width="900"
+       alt="Le même graphe en session collaborative : le panneau Collaborateurs liste deux analystes connectés, dont un en lecture seule ; une sélection multiple encadrée en pointillés verts porte le nom du collaborateur qui la manipule, et son curseur nommé apparaît sur le canvas.">
+  <br>
+  <em>La même enquête à deux : présence, curseurs nommés et sélection d'un collaborateur en direct.</em>
+</p>
+
 ---
 
 ## ✨ Fonctionnalités
