@@ -146,6 +146,20 @@ Le proxy doit relayer les WebSockets (`Upgrade` / `Connection`) sur `/yjs` et
 sudo apt install nginx certbot python3-certbot-nginx
 ```
 
+Une zone de limitation de débit, à déclarer dans le bloc `http` de
+`/etc/nginx/nginx.conf` — une `limit_req_zone` ne peut pas vivre dans un
+`server` :
+
+```nginx
+limit_req_zone $binary_remote_addr zone=osm:10m rate=30r/s;
+```
+
+> Derrière Cloudflare, `$binary_remote_addr` est l'adresse du **relais**, pas
+> celle du visiteur : sans `set_real_ip_from` ni `real_ip_header
+> CF-Connecting-IP`, la zone compte tout le trafic dans un seul seau et la
+> limite tombe sur tout le monde en même temps. Même piège que `TRUST_PROXY`
+> côté application.
+
 `/etc/nginx/sites-available/osintmapper` :
 
 ```nginx
@@ -170,6 +184,19 @@ server {
     # dans le corps de la requête. Sans cette ligne, nginx coupe à 1 Mo (défaut)
     # et tout envoi d'image un peu lourde échoue en 413.
     client_max_body_size 15m;
+
+    # Bornes posées EN AMONT du process Node. Express parse la chaîne de requête
+    # tout en haut de sa pile de routage : avant le limiteur applicatif (600
+    # req/min) et avant toute authentification. Ce plafond-là n'intervient donc
+    # qu'une fois le parsing payé. `limit_req` agit avant que Node ne lise quoi
+    # que ce soit, et `large_client_header_buffers` borne la taille de ce qu'il
+    # y aura à parser. C'est la mitigation des avis DoS de `qs`, qu'Express 4
+    # épingle et que seule la migration vers Express 5 corrigera à la source.
+    #
+    # 4k doit rester au-dessus de la taille du cookie de session, sinon les
+    # requêtes légitimes repartent en 431.
+    limit_req zone=osm burst=60 nodelay;
+    large_client_header_buffers 4 4k;
 
     location /api/ {
         proxy_pass http://127.0.0.1:4444;
