@@ -1,5 +1,9 @@
 # OSINTMapper
 
+<p align="center">
+  <img src="https://osintmapper.fr/images/logo.png" width="500" alt="logo osintmapper">
+</p>
+
 **Plateforme collaborative de cartographie OSINT** - Cartographiez vos investigations sur un graphe interactif, en temps réel, avec votre équipe.
 
 ![Version](https://img.shields.io/badge/version-0.1-blue)
