@@ -204,7 +204,11 @@ La cotation d'une entité suit le **couple OTAN** : fiabilité de la source (A-F
 
 ## 🤝 Contribuer
 
-Les contributions sont les bienvenues. Ouvrez une issue pour discuter des changements majeurs avant de soumettre une PR.
+Les contributions sont les bienvenues — voir **[CONTRIBUTING.md](CONTRIBUTING.md)** : amorçage de l'environnement, tests, conventions et règles à ne pas casser. Ouvrez une issue pour discuter des changements majeurs avant de soumettre une PR.
+
+## 🔒 Sécurité
+
+OSINTMapper héberge des dossiers d'enquête. Pour signaler une faille, **n'ouvrez pas d'issue publique** : passez par un [avis de sécurité privé](https://github.com/Geistnigma/OSINTMapper/security/advisories/new). Le périmètre, les versions suivies et les limites connues sont dans **[SECURITY.md](SECURITY.md)**.
 
 ---
 
