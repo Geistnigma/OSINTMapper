@@ -202,12 +202,6 @@ La cotation d'une entité suit le **couple OTAN** : fiabilité de la source (A-F
 
 ---
 
-## 📸 Captures
-
-*À venir*
-
----
-
 ## 🤝 Contribuer
 
 Les contributions sont les bienvenues. Ouvrez une issue pour discuter des changements majeurs avant de soumettre une PR.
