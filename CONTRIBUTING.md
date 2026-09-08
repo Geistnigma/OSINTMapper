@@ -1,8 +1,6 @@
 # Contribuer à OSINTMapper
 
-Merci de l'intérêt. Le projet est en alpha : l'architecture bouge encore, mais
-les règles ci-dessous ne bougent pas — elles viennent toutes d'un bug qui a
-coûté cher.
+Merci de l'intérêt. Le projet est en alpha et se met à jour au fil de l'eau.
 
 ## Amorcer un environnement
 
@@ -106,12 +104,11 @@ Les messages sont **en français**, au format `type(portée): sujet` —
 `feat`, `fix`, `docs`, `chore`, `build`, `refactor`, `revert`. Le sujet dit ce
 que le commit fait ; le corps dit **pourquoi**, et c'est la partie qui compte.
 
-Une pull request utile :
+Exemple de pull request :
 
 - fait une chose ;
 - passe `npm test` ;
 - décrit le symptôme observé, pas seulement le correctif ;
 - ne réintroduit aucune des règles ci-dessus.
 
-Pour un changement d'ampleur, ouvrez une issue d'abord : mieux vaut discuter
-d'une direction que refuser du travail déjà fait.
+Pour un changement d'ampleur, ouvrez une issue d'abord merci ! 
