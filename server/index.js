@@ -97,7 +97,8 @@ app.use(cors({
   origin: config.isProd ? (process.env.CORS_ORIGIN || false) : true,
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
+// 35 Mo : data-URI base64 d'un fichier jusqu'à 25 Mo (~4/3) + marge JSON.
+app.use(express.json({ limit: '35mb' }));
 app.use(cookieParser());
 
 /**
@@ -292,36 +293,17 @@ app.get('/api/route', requireAuthMw, async (req, res) => {
   } catch (e) { res.json({ code: 'route_failed', error: 'Route fetch failed' }); }
 });
 
-// ═══ IMAGE UPLOAD ═══
+// ═══ UPLOADS (images + documents allowlistés) ═══
 import { randomBytes } from 'crypto';
+import {
+  MIME_BY_EXT,
+  UPLOAD_ID_RE,
+  parseDataUri,
+  isInlineExt,
+} from './services/uploads.js';
 // Racine des données : configurable par DATA_DIR (voir config.js).
 const UPLOADS_DIR = path.join(config.dataDir, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-
-const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
-
-/**
- * Le contenu est-il réellement une image du type annoncé ?
- *
- * Contrôle de signature (« nombres magiques »), pas de validation complète :
- * il ne prétend pas qu'une image est saine, seulement qu'un fichier annoncé
- * `image/png` commence bien comme un PNG. Le service pose déjà un
- * `Content-Type` issu de la base et `nosniff`, donc le risque de polyglotte
- * était contenu - mais rien n'empêchait le répertoire d'accueillir n'importe
- * quel contenu sous une extension d'image.
- */
-function looksLikeImage(buf, ext) {
-  if (buf.length < 12) return false;
-  switch (ext) {
-    case 'png': return buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-    case 'jpg': return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
-    case 'gif': return buf.subarray(0, 4).toString('latin1') === 'GIF8';
-    // RIFF....WEBP : la taille occupe les octets 4 à 7.
-    case 'webp': return buf.subarray(0, 4).toString('latin1') === 'RIFF'
-      && buf.subarray(8, 12).toString('latin1') === 'WEBP';
-    default: return false;
-  }
-}
 
 // Chaque pièce jointe appartient à une enquête : on sert le fichier seulement à
 // qui a accès à cette enquête. Auparavant express.static exposait tout le
@@ -331,7 +313,7 @@ app.get('/api/uploads/:file', requireAuthMw, async (req, res) => {
     const file = req.params.file;
     // L'identifiant est le nom de fichier lui-même : on le contraint pour qu'il
     // ne puisse jamais sortir du répertoire des uploads.
-    if (!/^[a-f0-9]{24}\.(png|jpg|gif|webp)$/.test(file)) return res.status(404).end();
+    if (!UPLOAD_ID_RE.test(file)) return res.status(404).end();
 
     const upload = await prisma.upload.findUnique({ where: { id: file } });
     // Fichier inconnu de la base : pièce jointe orpheline d'avant le
@@ -345,8 +327,12 @@ app.get('/api/uploads/:file', requireAuthMw, async (req, res) => {
     if (!fs.existsSync(full)) return res.status(404).end();
 
     res.setHeader('Content-Type', MIME_BY_EXT[upload.ext] || 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.setHeader('Content-Disposition', 'inline');
+    // Images / PDF : affichage inline. Autres docs : téléchargement forcé
+    // (évite qu'un navigateur exécute / interprète le contenu).
+    const disp = isInlineExt(upload.ext) ? 'inline' : 'attachment';
+    res.setHeader('Content-Disposition', `${disp}; filename="${file}"`);
     res.sendFile(full);
   } catch (e) {
     console.error('Upload serve:', e.message);
@@ -356,22 +342,16 @@ app.get('/api/uploads/:file', requireAuthMw, async (req, res) => {
 
 app.post('/api/upload', requireAuthMw, requireCaseAccess, requireCaseRole('OWNER', 'ANALYST'), uploadLimiter, async (req, res) => {
   try {
-    const { data } = req.body; // data = base64 data URI
-    if (!data || !data.startsWith('data:image/')) return res.status(400).json({ code: 'bad_image_data', error: 'Invalid image data' });
-
-    const matches = data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
-    if (!matches) return res.status(400).json({ code: 'bad_image_format', error: 'Invalid image format' });
-
-    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-    const buffer = Buffer.from(matches[2], 'base64');
-
-    if (buffer.length > 10 * 1024 * 1024) return res.status(400).json({ code: 'image_too_large', error: 'Image trop lourde (max 10 Mo)' });
-
-    // Le type venait du seul en-tête déclaré par le client : n'importe quel
-    // contenu pouvait s'annoncer `data:image/png`. On vérifie les octets.
-    if (!looksLikeImage(buffer, ext)) {
-      return res.status(400).json({ code: 'image_mismatch', error: "Le contenu ne correspond pas à une image de ce type" });
+    const { data, filename } = req.body || {};
+    let parsed;
+    try {
+      parsed = parseDataUri(data);
+    } catch (e) {
+      const code = e.code || 'bad_upload_data';
+      const status = code === 'image_too_large' || code === 'file_too_large' ? 400 : 400;
+      return res.status(status).json({ code, error: e.message || 'Invalid upload' });
     }
+    const { ext, buffer, kind } = parsed;
 
     // Plafond cumulé par enquête. Un fichier seul était borné, le total ne
     // l'était pas : disque plein = base SQLite en lecture seule.
@@ -386,24 +366,30 @@ app.post('/api/upload', requireAuthMw, requireCaseAccess, requireCaseRole('OWNER
     }
 
     const fname = `${randomBytes(12).toString('hex')}.${ext}`;
-    // Écriture asynchrone : `writeFileSync` immobilisait la boucle d'événements
-    // le temps d'écrire jusqu'à 10 Mo, pour tous les utilisateurs.
     await fs.promises.writeFile(path.join(UPLOADS_DIR, fname), buffer);
+
+    // Nom d'origine : affichage seulement, jamais utilisé pour le stockage.
+    const safeName = typeof filename === 'string'
+      ? filename.replace(/[^\w.\- ()[\]]+/g, '_').slice(0, 180)
+      : '';
 
     try {
       await prisma.upload.create({
         data: { id: fname, caseId: req.case.id, uploaderId: req.user.id, ext, size: buffer.length },
       });
-      res.json({ url: `/api/uploads/${fname}` });
+      res.json({
+        url: `/api/uploads/${fname}`,
+        ext,
+        kind,
+        size: buffer.length,
+        filename: safeName || fname,
+      });
     } catch (e) {
-      // Pas d'enregistrement = fichier inaccessible : on ne le laisse pas traîner.
       try { await fs.promises.unlink(path.join(UPLOADS_DIR, fname)); } catch {}
       console.error('Upload record:', e.message);
       res.status(500).json({ code: 'upload_failed', error: 'Upload failed' });
     }
   } catch (e) {
-    // `e.message` était renvoyé tel quel : seul endroit de l'API qui échappait
-    // au gestionnaire global et livrait un message interne au client.
     console.error('Upload:', e.message);
     res.status(500).json({ code: 'upload_failed', error: 'Upload failed' });
   }

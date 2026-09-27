@@ -177,6 +177,7 @@ export default {
   'graphe.code': 'Code: ',
   'graphe.doubleClic': 'Double-click…',
   'panneau.imageTropLourde': 'Image too large (max 10 MB)',
+  'panneau.fichierTropLourd': 'File too large (max 25 MB)',
   'panneau.erreur': 'Error: {message}',
   'graphe.aideCanvas': 'Wheel = zoom · Drag = pan · Hold / Shift+Drag = link · Double-click = rename',
   'graphe.lectureSeuleAide': 'You cannot change this graph. Ask a moderator to switch your role to editor.',
@@ -347,7 +348,7 @@ export default {
   'panneau.adresseIntrouvable': 'Address not found.',
   'panneau.adresseCourte': 'Address too short (min. 5 chars)',
   'panneau.preuveDe': 'Evidence - {label}',
-  'panneau.erreurUpload': 'Image upload failed.',
+  'panneau.erreurUpload': 'File upload failed.',
   'panneau.titre.creeLe': 'Created on {date}',
   'panneau.titre.creePar': 'Record created by {nom}',
 
@@ -511,6 +512,12 @@ export default {
 
   // ── Entity panel actions ──────────────────────────────────────────────────
   'panneau.importerImage': 'Import an image',
+  'panneau.importerFichier': 'Import a file',
+  'panneau.champ.fichiers': 'Attached files',
+  'panneau.fichiersHint': 'Allowed: PDF, TXT, CSV, JSON, ODT/ODS/ODP, PNG/JPG/GIF/WEBP. Multiple files at once. Does not replace the entity photo. Executables and scripts are rejected.',
+  'panneau.collerHint': 'Tip: select the entity then Ctrl+V / Cmd+V to add a screenshot (without replacing existing images).',
+  'panneau.imageCollee': 'Image added to gallery',
+  'panneau.definirAvatar': 'Set as graph photo',
   'panneau.attacherPreuve': 'Attach evidence',
   'panneau.geolocaliser': 'Geolocate from the address',
   'panneau.supprimer': 'Delete',

@@ -188,6 +188,7 @@ export default {
   'graphe.code': 'Code : ',
   'graphe.doubleClic': 'Double-clic…',
   'panneau.imageTropLourde': 'Image trop lourde (max 10 Mo)',
+  'panneau.fichierTropLourd': 'Fichier trop lourd (max 25 Mo)',
   'panneau.erreur': 'Erreur : {message}',
   'graphe.aideCanvas': 'Molette = zoom · Glisser = déplacer · Maintenir / Maj+Glisser = lien · Double-clic = renommer',
   'graphe.lectureSeuleAide': "Vous ne pouvez pas modifier ce graphe. Demandez à l'administrateur de passer votre rôle en éditeur.",
@@ -358,7 +359,7 @@ export default {
   'panneau.adresseIntrouvable': 'Adresse non trouvée.',
   'panneau.adresseCourte': 'Adresse trop courte (min 5 car.)',
   'panneau.preuveDe': 'Preuve - {label}',
-  'panneau.erreurUpload': "Échec de l'envoi de l'image.",
+  'panneau.erreurUpload': "Échec de l'envoi du fichier.",
   'panneau.titre.creeLe': 'Créée le {date}',
   'panneau.titre.creePar': 'Fiche créée par {nom}',
 
@@ -525,6 +526,12 @@ export default {
 
   // ── Entity panel actions ──────────────────────────────────────────────────
   'panneau.importerImage': 'Importer une image',
+  'panneau.importerFichier': 'Importer un fichier',
+  'panneau.champ.fichiers': 'Fichiers joints',
+  'panneau.fichiersHint': 'Types acceptés : PDF, TXT, CSV, JSON, ODT/ODS/ODP, PNG/JPG/GIF/WEBP. Plusieurs fichiers à la fois. N’écrase pas la photo de l’entité. Exécutables et scripts refusés.',
+  'panneau.collerHint': 'Astuce : sélectionnez l’entité puis Ctrl+V / Cmd+V pour ajouter une capture (sans écraser les images déjà présentes).',
+  'panneau.imageCollee': 'Image ajoutée à la galerie',
+  'panneau.definirAvatar': 'Définir comme photo du graphe',
   'panneau.attacherPreuve': 'Attacher une preuve',
   'panneau.geolocaliser': "Géolocaliser depuis l'adresse",
   'panneau.supprimer': 'Supprimer',

@@ -30,6 +30,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config.js';
 import { zipSync, strToU8 } from 'fflate';
+/** Même contrainte qu'à la création et au service d'un upload. */
+import { UPLOAD_ID_RE as NOM_UPLOAD } from './uploads.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Racine des données : configurable par DATA_DIR (voir config.js).
@@ -38,9 +40,6 @@ const UPLOADS_DIR = path.join(config.dataDir, 'uploads');
 export const ARCHIVE_FORMAT = 'osintmapper-case';
 export const ARCHIVE_VERSION = 1;
 export const ARCHIVE_EXT = 'omcase';
-
-/** Même contrainte qu'à la création et au service d'un upload. */
-const NOM_UPLOAD = /^[a-f0-9]{24}\.(png|jpg|gif|webp)$/;
 
 /**
  * Construit l'archive d'une enquête.

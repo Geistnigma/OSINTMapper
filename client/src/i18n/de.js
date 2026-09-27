@@ -177,6 +177,7 @@ export default {
   'graphe.code': 'Code: ',
   'graphe.doubleClic': 'Doppelklick…',
   'panneau.imageTropLourde': 'Bild zu groß (max. 10 MB)',
+  'panneau.fichierTropLourd': 'Datei zu groß (max. 25 MB)',
   'panneau.erreur': 'Fehler: {message}',
   'graphe.aideCanvas': 'Mausrad = Zoom · Ziehen = verschieben · Halten / Umschalt+Ziehen = Verbindung · Doppelklick = umbenennen',
   'graphe.lectureSeuleAide': 'Sie können diesen Graphen nicht ändern. Bitten Sie die Moderation, Ihre Rolle auf Bearbeiter zu setzen.',
@@ -347,7 +348,7 @@ export default {
   'panneau.adresseIntrouvable': 'Adresse nicht gefunden.',
   'panneau.adresseCourte': 'Adresse zu kurz (mind. 5 Zeichen)',
   'panneau.preuveDe': 'Beweis - {label}',
-  'panneau.erreurUpload': 'Das Hochladen des Bildes ist fehlgeschlagen.',
+  'panneau.erreurUpload': 'Das Hochladen der Datei ist fehlgeschlagen.',
   'panneau.titre.creeLe': 'Erstellt am {date}',
   'panneau.titre.creePar': 'Datensatz erstellt von {nom}',
 
@@ -511,6 +512,12 @@ export default {
 
   // ── Entity panel actions ──────────────────────────────────────────────────
   'panneau.importerImage': 'Bild importieren',
+  'panneau.importerFichier': 'Datei importieren',
+  'panneau.champ.fichiers': 'Angehängte Dateien',
+  'panneau.fichiersHint': 'Erlaubt: PDF, TXT, CSV, JSON, ODT/ODS/ODP, PNG/JPG/GIF/WEBP. Mehrere Dateien gleichzeitig. Ersetzt nicht das Entitätsfoto. Ausführbare Dateien und Skripte werden abgelehnt.',
+  'panneau.collerHint': 'Tipp: Entität wählen, dann Strg+V / Cmd+V — Screenshot wird hinzugefügt (bestehende Bilder bleiben).',
+  'panneau.imageCollee': 'Bild zur Galerie hinzugefügt',
+  'panneau.definirAvatar': 'Als Graph-Foto festlegen',
   'panneau.attacherPreuve': 'Beweis anhängen',
   'panneau.geolocaliser': 'Aus der Adresse verorten',
   'panneau.supprimer': 'Löschen',

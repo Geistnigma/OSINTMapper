@@ -470,9 +470,17 @@ export default function OSINTMapper({ caseId: propCaseId, userName: propUserName
     collab.batch(()=>moved.forEach(m=>collab.sendEntityUpdate(m.id,{x:m.x,y:m.y})));
   },[entities,collab.batch,collab.sendEntityUpdate]);
 
+  // Accepte un patch objet OU une fonction (ent => patch) pour que les mises
+  // à jour asynchrones (uploads multi-fichiers) lisent toujours l'état frais
+  // et n'écrasent pas metadata.files / photo entre deux réponses.
   const updateEntity = useCallback((id,u)=>{if(isViewerRef.current)return;
-    setEntities(p=>p.map(e=>e.id===id?{...e,...u}:e));
-    collab.sendEntityUpdate(id,u);
+    let patch=u;
+    setEntities(p=>p.map(e=>{
+      if(e.id!==id)return e;
+      patch=typeof u==="function"?u(e):u;
+      return{...e,...patch};
+    }));
+    if(patch)collab.sendEntityUpdate(id,patch);
   },[collab.sendEntityUpdate]);
   const renameEntity=useCallback((id,newLabel)=>{updateEntity(id,{label:newLabel});return true;},[updateEntity]);
 
@@ -828,10 +836,11 @@ export default function OSINTMapper({ caseId: propCaseId, userName: propUserName
   const saveTimerRef = useRef(null);
   const lastSaveHashRef = useRef("");
 
-  // Compute a quick hash of current state to detect changes
+  // Hash qui DOIT inclure metadata (photo, files, tags…) et notes/description :
+  // sinon un upload d'image/fichier ne déclenche jamais /save et disparaît au F5.
   const stateHash = useMemo(()=>{
-    return `${entities.length}:${links.length}:${stickers.length}:${postits.length}:${timeline.length}:${entities.map(e=>e.id+e.x+e.y+e.label+(e.color||"")).join(",")}:${links.map(l=>l.id+l.type+l.label).join(",")}`;
-  },[entities,links,stickers,postits,timeline]);
+    return `${entities.length}:${links.length}:${stickers.length}:${postits.length}:${timeline.length}:${entities.map(e=>e.id+"|"+e.x+"|"+e.y+"|"+e.label+"|"+(e.color||"")+"|"+(e.description||"")+"|"+(e.notes||"")+"|"+JSON.stringify(e.metadata||{})+"|"+JSON.stringify(e.comments||[])).join(";")}:${links.map(l=>l.id+"|"+l.type+"|"+l.label+"|"+(l.confidence??"")+"|"+(l.strength||"")).join(";")}:${JSON.stringify(caseInfo||{})}`;
+  },[entities,links,stickers,postits,timeline,caseInfo]);
 
   // Save function - HTTP POST to server
   const doSave = useCallback(()=>{
